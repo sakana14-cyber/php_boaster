@@ -113,7 +113,24 @@ laravel/
 | `name` | string | ユーザー名 |
 | `email` | string | ログイン用メールアドレス |
 | `password` | string | ハッシュ化済みパスワード |
-| `hourly_wage` | unsigned integer | 現在の時給（円） |
+| `hourly_wage_default` | unsigned integer | 基本時給（円） |
+| `hourly_wage_weekend_holiday` | unsigned integer | 土日祝時給（円）。曜日から自動判定して適用する |
+| `rounding_unit_shift` | unsigned integer | 勤務中の端数切り捨て単位（分） |
+| `rounding_unit_edge` | unsigned integer | 出退勤打刻前後の端数切り捨て単位（分） |
+| `created_at` / `updated_at` | timestamp | 作成・更新日時 |
+
+#### special_wages
+
+ユーザーが任意に登録する時間帯指定の特別給（深夜給など）です。1 ユーザーにつき複数登録できます。
+
+| カラム | 型の例 | 内容 |
+|---|---|---|
+| `id` | bigint | 主キー |
+| `user_id` | foreign key | 所有ユーザー |
+| `title` | string | 名称（例: 深夜給） |
+| `start_time` | time | 適用開始時刻 |
+| `end_time` | time | 適用終了時刻 |
+| `hourly_wage` | unsigned integer | この時間帯に適用する時給（円） |
 | `created_at` / `updated_at` | timestamp | 作成・更新日時 |
 
 #### work_sessions
@@ -122,24 +139,31 @@ laravel/
 |---|---|---|
 | `id` | bigint | 主キー |
 | `user_id` | foreign key | 勤務したユーザー |
-| `clocked_in_at` | datetime | 出勤日時 |
-| `clocked_out_at` | nullable datetime | 退勤日時。勤務中は `NULL` |
-| `hourly_wage` | unsigned integer | 出勤時に固定した適用時給（円） |
-| `worked_seconds` | nullable unsigned integer | 確定勤務秒数 |
-| `salary` | nullable unsigned integer | 確定給与（円） |
+| `scheduled_start_at` | nullable datetime | 予定出勤日時（カレンダーで事前入力するシフト） |
+| `scheduled_end_at` | nullable datetime | 予定退勤日時 |
+| `actual_start_at` | nullable datetime | 実際の出勤日時（打刻）。`NULL` は未出勤 |
+| `actual_end_at` | nullable datetime | 実際の退勤日時（打刻）。`NULL` は勤務中または未実施 |
+| `earned_amount` | nullable unsigned integer | このセッションで確定した給与（円） |
 | `created_at` / `updated_at` | timestamp | 作成・更新日時 |
 
-過去の給与を変えないため、勤務記録には出勤時点の時給を必ず保存します。ユーザーが後から時給を変更しても、過去の `work_sessions.hourly_wage` は更新しません。
+過去の給与を変えないため、給与計算は打刻時点の `users`／`special_wages` の設定値で行い、退勤時に `earned_amount` として確定・保存します。ユーザーが後から時給や特別給を変更しても、確定済みの `earned_amount` は再計算しません。
 
 ## 業務ルール
 
 ### 給与計算
 
-給与は分や時間ではなく、秒単位で計算します。
+給与は分や時間ではなく、秒単位で計算します。適用時給は勤務区間を時間帯・曜日ごとに分割し、区間ごとに次の優先順位で決定します。
+
+1. `special_wages` に登録された時間帯と重なる部分は、その `hourly_wage`
+2. 勤務日が土日祝なら `hourly_wage_weekend_holiday`
+3. どちらにも該当しなければ `hourly_wage_default`
+
+特別給の時間帯と土日祝が重なる場合は、特別給を優先します。
 
 ```text
-勤務秒数 = 退勤日時 - 出勤日時
-給与     = floor(適用時給 × 勤務秒数 ÷ 3600)
+勤務秒数 = 退勤日時 - 出勤日時（rounding_unit_shift 分単位で切り捨て）
+区間ごとの給与 = floor(区間の適用時給 × 区間の勤務秒数 ÷ 3600)
+給与 = 区間ごとの給与の合計
 ```
 
 例：時給 1,200 円で 1 時間 30 分（5,400 秒）勤務した場合
@@ -150,8 +174,9 @@ floor(1200 × 5400 ÷ 3600) = 1,800 円
 
 - 勤務中に表示する金額は「予測給与」とする
 - 退勤後に Laravel が計算して保存した金額は「確定給与」とする
+- 出退勤の打刻時刻は `rounding_unit_edge` 分単位で丸めてから実働時間を算出する
 - 1 円未満は切り捨てる
-- 端数処理は給与計算クラスの一か所に集約する
+- 端数処理・時給の優先判定は給与計算クラス（`app/Services/SalaryCalculator.php`）の一か所に集約する
 - 金額は `123,456円` の形式で表示する
 
 ### 出勤・退勤
@@ -341,6 +366,7 @@ npm run build
 - 標準機能や既存依存で実装できる場合は、新しいライブラリを追加しない
 - 仕様変更や機能削除を独断で行わない
 - 変更後はコード整形、関連テスト、全体テストを実行する
+- ブランチ運用・コミットメッセージの書き方は [CONTRIBUTING.md](CONTRIBUTING.md) に従う
 
 ## 将来の拡張候補
 
