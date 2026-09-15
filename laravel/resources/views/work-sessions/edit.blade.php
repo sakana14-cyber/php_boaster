@@ -5,9 +5,9 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+    <div class="py-8">
+        <div class="px-4">
+            <div class="bg-white shadow rounded-lg p-4">
                 <form method="post" action="{{ route('work-sessions.edit.update', $workSession) }}" class="space-y-6">
                     @csrf
                     @method('put')

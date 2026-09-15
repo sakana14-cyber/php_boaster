@@ -5,8 +5,8 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div class="py-8">
+        <div class="px-4 space-y-6">
             <a href="{{ route('calendar.index', ['year' => $day->year, 'month' => $day->month]) }}"
                class="text-indigo-600 hover:underline text-sm">&laquo; カレンダーに戻る</a>
 
