@@ -17,6 +17,10 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->unsignedInteger('hourly_wage_default')->default(0);
+            $table->unsignedInteger('hourly_wage_weekend_holiday')->default(0);
+            $table->unsignedInteger('rounding_unit_shift')->default(1);
+            $table->unsignedInteger('rounding_unit_edge')->default(1);
             $table->rememberToken();
             $table->timestamps();
         });
