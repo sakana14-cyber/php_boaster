@@ -9,8 +9,8 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-2xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div class="py-8">
+        <div class="px-4 space-y-6">
             @if ($errors->has('work_session'))
                 <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">
                     {{ $errors->first('work_session') }}

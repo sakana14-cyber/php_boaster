@@ -12,9 +12,9 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="bg-white shadow sm:rounded-lg p-6">
+    <div class="py-8">
+        <div class="px-4 space-y-6">
+            <div class="bg-white shadow rounded-lg p-4">
                 <div class="flex items-center justify-between mb-4">
                     <a href="{{ route('calendar.index', ['year' => $prevMonth->year, 'month' => $prevMonth->month]) }}"
                        class="text-indigo-600 hover:underline">&laquo; 前月</a>
