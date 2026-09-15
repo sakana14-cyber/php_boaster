@@ -29,6 +29,10 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
+            'hourly_wage_default' => 1000,
+            'hourly_wage_weekend_holiday' => 1250,
+            'rounding_unit_shift' => 1,
+            'rounding_unit_edge' => 1,
             'remember_token' => Str::random(10),
         ];
     }
