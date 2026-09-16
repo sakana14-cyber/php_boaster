@@ -4,35 +4,36 @@ namespace App\Http\Controllers;
 
 use App\Actions\WorkSessions\ClockIn;
 use App\Actions\WorkSessions\ClockOut;
+use App\Http\Resources\WorkSessionResource;
 use App\Models\WorkSession;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 class WorkSessionController extends Controller
 {
-    public function store(ClockIn $clockIn): RedirectResponse
+    public function store(ClockIn $clockIn): JsonResponse
     {
         try {
-            $clockIn->handle(request()->user());
+            $workSession = $clockIn->handle(request()->user());
         } catch (RuntimeException $e) {
-            return Redirect::route('dashboard')->withErrors(['work_session' => $e->getMessage()]);
+            throw ValidationException::withMessages(['work_session' => $e->getMessage()]);
         }
 
-        return Redirect::route('dashboard');
+        return response()->json(['work_session' => new WorkSessionResource($workSession)], 201);
     }
 
-    public function update(WorkSession $workSession, ClockOut $clockOut): RedirectResponse
+    public function update(WorkSession $workSession, ClockOut $clockOut): JsonResponse
     {
         Gate::authorize('update', $workSession);
 
         try {
-            $clockOut->handle($workSession);
+            $workSession = $clockOut->handle($workSession);
         } catch (RuntimeException $e) {
-            return Redirect::route('dashboard')->withErrors(['work_session' => $e->getMessage()]);
+            throw ValidationException::withMessages(['work_session' => $e->getMessage()]);
         }
 
-        return Redirect::route('dashboard');
+        return response()->json(['work_session' => new WorkSessionResource($workSession)]);
     }
 }

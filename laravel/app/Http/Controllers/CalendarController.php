@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\WorkSessionResource;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\View\View;
 
 class CalendarController extends Controller
 {
     /**
-     * 指定月(デフォルト今月)の日別給与一覧と月間集計を表示する。
+     * 指定月(デフォルト今月)の日別給与一覧と月間集計を返す。
      */
-    public function index(Request $request): View
+    public function index(Request $request): JsonResponse
     {
         $month = Carbon::createFromDate(
             (int) $request->integer('year', now()->year),
@@ -34,21 +35,22 @@ class CalendarController extends Controller
                     ? $session->actual_end_at->diffInSeconds($session->actual_start_at, true)
                     : 0
             ),
-        ]);
+        ])->all();
 
-        return view('calendar.index', [
-            'month' => $month,
-            'dailyTotals' => $dailyTotals,
-            'monthlyEarnedAmount' => (int) $sessions->sum('earned_amount'),
-            'monthlyWorkedSeconds' => $dailyTotals->sum('worked_seconds'),
-            'monthlyWorkedDays' => $sessionsByDate->count(),
+        return response()->json([
+            'year' => $month->year,
+            'month' => $month->month,
+            'daily_totals' => $dailyTotals,
+            'monthly_earned_amount' => (int) $sessions->sum('earned_amount'),
+            'monthly_worked_seconds' => (int) collect($dailyTotals)->sum('worked_seconds'),
+            'monthly_worked_days' => $sessionsByDate->count(),
         ]);
     }
 
     /**
-     * 指定日の勤務明細(打刻時刻・給与)を表示する。
+     * 指定日の勤務明細(打刻時刻・給与)を返す。
      */
-    public function show(Request $request, string $date): View
+    public function show(Request $request, string $date): JsonResponse
     {
         $day = Carbon::createFromFormat('Y-m-d', $date)->startOfDay();
 
@@ -57,9 +59,9 @@ class CalendarController extends Controller
             ->orderBy('actual_start_at')
             ->get();
 
-        return view('calendar.show', [
-            'day' => $day,
-            'sessions' => $sessions,
+        return response()->json([
+            'date' => $day->toDateString(),
+            'sessions' => WorkSessionResource::collection($sessions),
         ]);
     }
 }
