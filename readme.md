@@ -50,58 +50,64 @@
 
 ## 技術構成
 
-PHP と Laravel をアプリケーションの中核として使用します。
+バックエンド(Laravel)を JSON API、フロントエンド(Next.js)を SPA として分離した構成です。
 
 | 分類 | 技術 | 用途 |
 |---|---|---|
 | バックエンド | PHP 8.3 以上 | アプリケーションロジック |
 | フレームワーク | Laravel 13 | ルーティング、認証、検証、ORM、テスト |
-| UI | Blade | サーバーサイドレンダリング |
-| CSS | Tailwind CSS 4 | モバイルファーストの画面設計 |
-| JavaScript | Vanilla JavaScript | 勤務中タイマーなど必要最小限の動的表示 |
-| ビルド | Vite 8 | CSS・JavaScript の開発とビルド |
+| API 認証 | Laravel Sanctum | Cookie ベースの SPA 向け認証、CSRF 保護 |
 | データベース | SQLite（開発時） | ユーザー、時給、勤務記録の保存 |
-| テスト | PHPUnit 12 | 単体・機能テスト |
+| バックエンドテスト | PHPUnit 12 | 単体・機能テスト |
+| フロントエンド | Next.js 16（App Router） | ルーティング、画面表示 |
+| UI ライブラリ | React 19 / TypeScript | コンポーネント実装 |
+| CSS | Tailwind CSS 4 | モバイルファーストの画面設計 |
 
-アプリケーション本体は [`laravel/`](laravel) に配置されています。初期段階では単一の Laravel アプリとして構成し、別のフロントエンド SPA や API サーバーへ不用意に分割しません。
+バックエンドは [`laravel/`](laravel)、フロントエンドは [`frontend/`](frontend) に、それぞれ独立したプロジェクトとして配置しています。当初は単一の Laravel アプリ（Blade）として実装していましたが、UI をより柔軟に作り込むため、Laravel を API 専用に切り替え、フロントエンドを Next.js の別プロジェクトへ分離しました。
 
 ## システム設計
 
 ### 責務の分担
 
-- Laravel は認証、入力検証、勤務状態の管理、確定給与の計算、DB 更新を担当する
-- Blade は Laravel が返した状態を安全に表示する
-- JavaScript は、サーバーから受け取った出勤日時と適用時給を使って予測表示だけを更新する
+- Laravel（`laravel/`）は認証（Sanctum）、入力検証、勤務状態の管理、確定給与の計算、DB 更新を担当し、JSON のみを返す
+- Next.js（`frontend/`）は Laravel の API から取得した状態を画面へ描画する
+- クライアント側（TypeScript）は、サーバーから受け取った出勤日時と適用時給を使って予測表示だけを更新する
 - 予測給与の更新を目的として毎秒 API や DB へアクセスしない
 - 退勤時の確定値はブラウザの計算結果を信用せず、Laravel 側で再計算する
+- CORS は `frontend/` のオリジンのみを許可し、Cookie 送信には `credentials: 'include'` を用いる
 
 ### 推奨ディレクトリ構成
 
-実装時は Laravel の標準構成を保ち、役割を次のように分離します。
-
 ```text
-laravel/
+laravel/                         # Laravel（API）
 ├── app/
 │   ├── Actions/WorkSessions/    # 出勤・退勤などのユースケース
 │   ├── Http/Controllers/        # HTTP リクエストの受付
 │   ├── Http/Requests/           # 入力バリデーション
+│   ├── Http/Resources/          # JSON レスポンスの整形
 │   ├── Models/                  # User、WorkSession など
 │   └── Services/                # 給与計算・集計処理
 ├── database/
 │   ├── factories/
 │   ├── migrations/
 │   └── seeders/
-├── resources/
-│   ├── css/
-│   ├── js/
-│   └── views/
-├── routes/web.php
+├── routes/api.php
 └── tests/
-    ├── Feature/
-    └── Unit/
+    └── Feature/
+
+frontend/                        # Next.js（SPA）
+├── app/
+│   ├── login/, register/        # 未認証時の画面
+│   └── (app)/                   # 認証必須画面（下部タブナビゲーション）
+│       ├── dashboard/
+│       ├── calendar/[date]?/
+│       ├── settings/
+│       └── work-sessions/[id]/edit/
+├── context/AuthContext.tsx      # ログイン状態の管理
+└── lib/                         # API クライアント・型定義・給与計算ロジック
 ```
 
-過度な抽象化は避けますが、給与計算を Controller や JavaScript に重複して記述しないため、サーバー側の計算処理は専用クラスへ集約します。
+過度な抽象化は避けますが、給与計算を Controller やフロントエンドに重複して記述しないため、サーバー側の計算処理は専用クラス（`SalaryCalculator`）へ集約します。
 
 ### データモデル
 
@@ -214,7 +220,7 @@ floor(1200 × 5400 ÷ 3600) = 1,800 円
 - フロントエンドが送信した給与や勤務秒数をそのまま保存する
 - バリデーションなしで入力値を利用する
 
-Laravel の認証、認可、CSRF 保護、Form Request、Eloquent のバインディングを利用し、SQL インジェクション、XSS、CSRF など一般的な脆弱性を防ぎます。
+Laravel の認証（Sanctum）、認可、CSRF 保護、Form Request、Eloquent のバインディングを利用し、SQL インジェクション、XSS、CSRF など一般的な脆弱性を防ぎます。CORS は許可オリジンを `frontend/` のみに限定します。
 
 ## 画面構成
 
@@ -274,18 +280,7 @@ Laravel の認証、認可、CSRF 保護、Form Request、Eloquent のバイン�
 - Node.js / npm
 - PHP SQLite 拡張（`pdo_sqlite`）
 
-### インストール
-
-```bash
-git clone <repository-url>
-cd php_boaster/laravel
-touch database/database.sqlite
-composer run setup
-```
-
-`composer run setup` は依存関係のインストール、`.env` の作成、アプリケーションキー生成、マイグレーション、フロントエンドのビルドを実行します。
-
-個別に実行する場合：
+### バックエンド（Laravel API）
 
 ```bash
 cd laravel
@@ -294,33 +289,53 @@ cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
-npm install
-npm run build
 ```
+
+`.env` の `SANCTUM_STATEFUL_DOMAINS` / `FRONTEND_URLS` は、フロントエンドのオリジン（デフォルト `localhost:3000`）と一致させてください。
+
+### フロントエンド（Next.js）
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+```
+
+`.env.local` の `NEXT_PUBLIC_API_URL` は Laravel API の URL（デフォルト `http://localhost:8000`）。
 
 ### 開発サーバー
 
+バックエンド・フロントエンドをそれぞれ別ターミナルで起動します。
+
 ```bash
+# ターミナル1: Laravel API（http://localhost:8000）
 cd laravel
-composer run dev
+php artisan serve
+
+# ターミナル2: Next.js（http://localhost:3000）
+cd frontend
+npm run dev
 ```
 
-起動後、原則として `http://localhost:8000` を開きます。終了する場合は `Ctrl+C` を押してください。
+ブラウザは `http://localhost:3000` を開いてください（`127.0.0.1` ではなく `localhost` を使うこと。CORS / Sanctum の stateful domain 設定が `localhost` を前提にしているため）。
 
 ### よく使うコマンド
 
 ```bash
-# テスト
-composer test
+# Laravel: テスト
+cd laravel && composer test
 
-# PHP のコード整形
-./vendor/bin/pint
+# Laravel: コード整形
+cd laravel && ./vendor/bin/pint
 
-# DB を作り直してシードを投入（既存の開発データは消える）
-php artisan migrate:fresh --seed
+# Laravel: DB を作り直す（既存の開発データは消える）
+cd laravel && php artisan migrate:fresh
 
-# 本番用アセットの生成
-npm run build
+# Next.js: 型チェック・Lint
+cd frontend && npm run lint
+
+# Next.js: 本番ビルド
+cd frontend && npm run build
 ```
 
 ## テスト方針
@@ -344,14 +359,16 @@ npm run build
 ## 実装ロードマップ
 
 - [x] Laravel 13 プロジェクトの作成
-- [ ] 認証機能の実装
-- [ ] 時給設定とバリデーション
-- [ ] 勤務記録テーブルとモデルの作成
-- [ ] 出勤・退勤処理と多重実行対策
-- [ ] 給与計算サービスと Unit テスト
-- [ ] ホーム画面とリアルタイム予測表示
-- [ ] 日別履歴と編集・削除
-- [ ] カレンダーと月間集計
+- [x] 勤務記録テーブルとモデルの作成
+- [x] 給与計算サービスと Unit テスト
+- [x] 認証機能の実装（Sanctum）
+- [x] 出勤・退勤処理と多重実行対策
+- [x] 時給設定とバリデーション
+- [x] 日別履歴と編集・削除
+- [x] カレンダーと月間集計
+- [x] Laravel を API 専用へ切り替え、Next.js フロントエンドを追加
+- [x] ホーム画面とリアルタイム予測表示（Next.js）
+- [ ] パスワードリセット・メール確認画面
 - [ ] レスポンシブ対応とアクセシビリティ確認
 - [ ] Feature テストの拡充
 
