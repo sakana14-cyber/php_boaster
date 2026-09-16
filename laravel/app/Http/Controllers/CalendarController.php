@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
 class CalendarController extends Controller
 {
     /**
-     * 指定月(デフォルト今月)の日別給与一覧と月間集計を返す。
+     * 指定月(デフォルト今月)の日別給与一覧・シフト予定日・月間集計を返す。
      */
     public function index(Request $request): JsonResponse
     {
@@ -19,9 +19,11 @@ class CalendarController extends Controller
             (int) $request->integer('month', now()->month),
             1,
         )->startOfMonth();
+        $monthStart = $month->copy()->startOfDay();
+        $monthEnd = $month->copy()->endOfMonth()->endOfDay();
 
         $sessions = $request->user()->workSessions()
-            ->whereBetween('actual_start_at', [$month->copy()->startOfDay(), $month->copy()->endOfMonth()->endOfDay()])
+            ->whereBetween('actual_start_at', [$monthStart, $monthEnd])
             ->whereNotNull('actual_start_at')
             ->orderBy('actual_start_at')
             ->get();
@@ -37,10 +39,19 @@ class CalendarController extends Controller
             ),
         ])->all();
 
+        $shiftDays = $request->user()->workSessions()
+            ->whereNull('actual_start_at')
+            ->whereBetween('scheduled_start_at', [$monthStart, $monthEnd])
+            ->pluck('scheduled_start_at')
+            ->map(fn ($datetime) => $datetime->toDateString())
+            ->unique()
+            ->values();
+
         return response()->json([
             'year' => $month->year,
             'month' => $month->month,
             'daily_totals' => $dailyTotals,
+            'shift_days' => $shiftDays,
             'monthly_earned_amount' => (int) $sessions->sum('earned_amount'),
             'monthly_worked_seconds' => (int) collect($dailyTotals)->sum('worked_seconds'),
             'monthly_worked_days' => $sessionsByDate->count(),
@@ -48,15 +59,21 @@ class CalendarController extends Controller
     }
 
     /**
-     * 指定日の勤務明細(打刻時刻・給与)を返す。
+     * 指定日の勤務明細(予定シフト・実績・給与)を返す。
      */
     public function show(Request $request, string $date): JsonResponse
     {
         $day = Carbon::createFromFormat('Y-m-d', $date)->startOfDay();
 
         $sessions = $request->user()->workSessions()
-            ->whereBetween('actual_start_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
-            ->orderBy('actual_start_at')
+            ->where(function ($query) use ($day) {
+                $query->whereBetween('actual_start_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
+                    ->orWhere(function ($query) use ($day) {
+                        $query->whereNull('actual_start_at')
+                            ->whereBetween('scheduled_start_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()]);
+                    });
+            })
+            ->orderByRaw('COALESCE(actual_start_at, scheduled_start_at)')
             ->get();
 
         return response()->json([

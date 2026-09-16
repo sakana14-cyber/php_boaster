@@ -27,6 +27,7 @@ export type WorkSession = {
 
 export type DashboardData = {
     active_session: WorkSession | null;
+    todays_shift: WorkSession | null;
     today_earned_amount: number;
 };
 
@@ -39,6 +40,7 @@ export type CalendarIndexData = {
     year: number;
     month: number;
     daily_totals: Record<string, CalendarDailyTotal>;
+    shift_days: string[];
     monthly_earned_amount: number;
     monthly_worked_seconds: number;
     monthly_worked_days: number;

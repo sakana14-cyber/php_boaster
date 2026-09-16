@@ -6,14 +6,23 @@ import { useAuth } from "@/context/AuthContext";
 import { formatElapsedTime, predictSalary } from "@/lib/salary";
 import type { DashboardData, SpecialWage, WorkSession } from "@/lib/types";
 
+const RING_RADIUS = 170;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const FALLBACK_SHIFT_SECONDS = 8 * 60 * 60;
+
 export default function DashboardPage() {
     const { user } = useAuth();
     const [data, setData] = useState<DashboardData | null>(null);
     const [specialWages, setSpecialWages] = useState<SpecialWage[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [elapsed, setElapsed] = useState("00:00:00");
+
+    const [isPaused, setIsPaused] = useState(false);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [predicted, setPredicted] = useState(0);
+
+    const runStartRef = useRef<Date | null>(null);
+    const elapsedOffsetRef = useRef(0);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const loadDashboard = useCallback(async () => {
@@ -29,25 +38,49 @@ export default function DashboardPage() {
         );
     }, [loadDashboard]);
 
+    const activeSession = data?.active_session ?? null;
+
+    // 出勤中セッションが変わったらタイマー状態を初期化する
+    useEffect(() => {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- 出勤中セッションの切り替わりに合わせてタイマー状態を初期化する
+        setIsPaused(false);
+        elapsedOffsetRef.current = 0;
+
+        if (!activeSession?.actual_start_at) {
+            runStartRef.current = null;
+            setElapsedSeconds(0);
+            setPredicted(0);
+            return;
+        }
+
+        runStartRef.current = new Date(activeSession.actual_start_at);
+    }, [activeSession?.id, activeSession?.actual_start_at]);
+
+    // タイマーの進行(一時停止中は止める)
     useEffect(() => {
         if (timerRef.current) {
             clearInterval(timerRef.current);
             timerRef.current = null;
         }
 
-        const session = data?.active_session;
-        if (!session?.actual_start_at || !user) {
+        if (!activeSession || !runStartRef.current || isPaused || !user) {
             return;
         }
 
-        const startedAt = new Date(session.actual_start_at);
-
         function tick() {
             const now = new Date();
-            const seconds = Math.max(0, (now.getTime() - startedAt.getTime()) / 1000);
-            setElapsed(formatElapsedTime(seconds));
-            if (user) {
-                setPredicted(predictSalary(startedAt, now, user, specialWages));
+            const runStart = runStartRef.current;
+            if (!runStart) {
+                return;
+            }
+            const seconds = elapsedOffsetRef.current + Math.max(0, (now.getTime() - runStart.getTime()) / 1000);
+            setElapsedSeconds(seconds);
+            if (user && activeSession?.actual_start_at) {
+                setPredicted(predictSalary(new Date(activeSession.actual_start_at), now, user, specialWages));
             }
         }
 
@@ -59,7 +92,22 @@ export default function DashboardPage() {
                 clearInterval(timerRef.current);
             }
         };
-    }, [data?.active_session, specialWages, user]);
+    }, [activeSession, isPaused, specialWages, user]);
+
+    function togglePause() {
+        if (!runStartRef.current) {
+            return;
+        }
+
+        if (isPaused) {
+            runStartRef.current = new Date();
+            setIsPaused(false);
+        } else {
+            const now = new Date();
+            elapsedOffsetRef.current += Math.max(0, (now.getTime() - runStartRef.current.getTime()) / 1000);
+            setIsPaused(true);
+        }
+    }
 
     async function handleClockIn() {
         setSubmitting(true);
@@ -68,7 +116,7 @@ export default function DashboardPage() {
             await apiFetch("/api/work-sessions", { method: "POST" });
             await loadDashboard();
         } catch (e) {
-            setError(e instanceof ApiError ? e.errors?.work_session?.[0] ?? e.message : "エラーが発生しました");
+            setError(e instanceof ApiError ? (e.errors?.work_session?.[0] ?? e.message) : "エラーが発生しました");
         } finally {
             setSubmitting(false);
         }
@@ -81,7 +129,7 @@ export default function DashboardPage() {
             await apiFetch(`/api/work-sessions/${session.id}`, { method: "PATCH" });
             await loadDashboard();
         } catch (e) {
-            setError(e instanceof ApiError ? e.errors?.work_session?.[0] ?? e.message : "エラーが発生しました");
+            setError(e instanceof ApiError ? (e.errors?.work_session?.[0] ?? e.message) : "エラーが発生しました");
         } finally {
             setSubmitting(false);
         }
@@ -91,56 +139,103 @@ export default function DashboardPage() {
         return null;
     }
 
-    const activeSession = data.active_session;
+    const shiftSeconds = (() => {
+        if (activeSession?.scheduled_start_at && activeSession?.scheduled_end_at) {
+            const diff =
+                (new Date(activeSession.scheduled_end_at).getTime() -
+                    new Date(activeSession.scheduled_start_at).getTime()) /
+                1000;
+            return diff > 0 ? diff : FALLBACK_SHIFT_SECONDS;
+        }
+        return FALLBACK_SHIFT_SECONDS;
+    })();
+
+    const progressRatio = activeSession ? Math.min(1, elapsedSeconds / shiftSeconds) : 0;
+    const dashOffset = RING_CIRCUMFERENCE * (1 - progressRatio);
+
+    const amountText = activeSession ? predicted : data.today_earned_amount;
+    const timeText = activeSession ? formatElapsedTime(elapsedSeconds) : "00:00:00";
 
     return (
-        <div className="py-8">
-            <header className="bg-white shadow px-4 py-4">
-                <h2 className="font-semibold text-xl text-gray-800">ホーム</h2>
-            </header>
+        <div className="py-12 flex flex-col items-center gap-6">
+            {error && (
+                <div className="mx-4 bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">{error}</div>
+            )}
 
-            <div className="px-4 pt-8 space-y-6">
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>
+            <div className="relative w-[380px] h-[380px] flex items-center justify-center">
+                {activeSession && (
+                    <svg viewBox="0 0 380 380" className="absolute inset-0 -rotate-90">
+                        <defs>
+                            <linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#DF4400" />
+                                <stop offset="100%" stopColor="#FFD17F" />
+                            </linearGradient>
+                        </defs>
+                        <circle
+                            cx="190"
+                            cy="190"
+                            r={RING_RADIUS}
+                            fill="none"
+                            stroke="url(#ring-gradient)"
+                            strokeWidth="20"
+                            strokeLinecap="round"
+                            strokeDasharray={RING_CIRCUMFERENCE}
+                            strokeDashoffset={dashOffset}
+                        />
+                    </svg>
                 )}
 
-                <div className="bg-white overflow-hidden shadow-sm rounded-lg p-6 text-center">
-                    {activeSession ? (
-                        <>
-                            <p className="text-sm text-gray-500">勤務中</p>
-                            <p className="text-4xl font-bold text-gray-900 mt-2">{elapsed}</p>
-
-                            <p className="text-sm text-gray-500 mt-6">現在の予測給与</p>
-                            <p className="text-3xl font-bold text-indigo-600 mt-1">
-                                {predicted.toLocaleString("ja-JP")}円
-                            </p>
-
-                            <button
-                                onClick={() => handleClockOut(activeSession)}
-                                disabled={submitting}
-                                className="mt-8 w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg disabled:opacity-60"
-                            >
-                                退勤する
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <p className="text-sm text-gray-500">今日の給与</p>
-                            <p className="text-4xl font-bold text-gray-900 mt-2">
-                                {data.today_earned_amount.toLocaleString("ja-JP")}円
-                            </p>
-
-                            <button
-                                onClick={handleClockIn}
-                                disabled={submitting}
-                                className="mt-8 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg disabled:opacity-60"
-                            >
-                                出勤する
-                            </button>
-                        </>
-                    )}
+                <div className="flex flex-col items-center gap-2">
+                    <p className="text-[40px] font-medium text-[#898989] leading-tight">
+                        ¥{amountText.toLocaleString("ja-JP")}
+                    </p>
+                    <p className="text-2xl text-[#898989]">{timeText}</p>
                 </div>
             </div>
+
+            <div className="flex items-center justify-center gap-12">
+                {activeSession ? (
+                    <>
+                        <button
+                            onClick={() => handleClockOut(activeSession)}
+                            disabled={submitting}
+                            className="h-14 w-14 rounded-full bg-[#EBEBEB] flex items-center justify-center text-sm font-medium text-[#898989] disabled:opacity-60"
+                        >
+                            終了
+                        </button>
+                        <button
+                            onClick={togglePause}
+                            className="h-14 w-14 rounded-full bg-[#EBEBEB] flex items-center justify-center text-[#898989]"
+                        >
+                            {isPaused ? <PlayIcon /> : <PauseIcon />}
+                        </button>
+                    </>
+                ) : (
+                    <button
+                        onClick={handleClockIn}
+                        disabled={submitting}
+                        className="h-14 w-14 rounded-full bg-[#EBEBEB] flex items-center justify-center text-[#898989] disabled:opacity-60"
+                    >
+                        <PlayIcon />
+                    </button>
+                )}
+            </div>
         </div>
+    );
+}
+
+function PlayIcon() {
+    return (
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 3l14 9-14 9V3z" />
+        </svg>
+    );
+}
+
+function PauseIcon() {
+    return (
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 5v14M16 5v14" />
+        </svg>
     );
 }
