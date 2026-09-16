@@ -103,15 +103,19 @@ export default function CalendarPage() {
 
                             const dateString = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                             const total = data.daily_totals[dateString];
+                            const hasShift = data.shift_days.includes(dateString);
 
                             return (
                                 <Link
                                     key={dateString}
                                     href={`/calendar/${dateString}`}
-                                    className={`aspect-square border rounded-md p-1 flex flex-col items-center justify-center hover:bg-gray-50 ${
+                                    className={`relative aspect-square border rounded-md p-1 flex flex-col items-center justify-center hover:bg-gray-50 ${
                                         total ? "border-indigo-300 bg-indigo-50" : "border-gray-100"
                                     }`}
                                 >
+                                    {hasShift && (
+                                        <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-orange-400" />
+                                    )}
                                     <span className="text-sm text-gray-700">{day}</span>
                                     {total && (
                                         <span className="text-[10px] text-indigo-600 font-semibold">

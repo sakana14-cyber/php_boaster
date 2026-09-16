@@ -1,15 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { apiFetch } from "@/lib/api";
-import type { CalendarShowData } from "@/lib/types";
+import { apiFetch, ApiError } from "@/lib/api";
+import type { CalendarShowData, WorkSession } from "@/lib/types";
+
+function formatTime(iso: string | null): string {
+    if (!iso) {
+        return "—";
+    }
+    return new Date(iso).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+}
+
+function toLocalInputValue(iso: string | null, fallbackDate: string, fallbackTime: string): string {
+    if (!iso) {
+        return `${fallbackDate}T${fallbackTime}`;
+    }
+    const date = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 export default function CalendarDayPage({ params }: PageProps<"/calendar/[date]">) {
     const { date } = use(params);
     const router = useRouter();
     const [data, setData] = useState<CalendarShowData | null>(null);
+    const [shiftForm, setShiftForm] = useState<{ start: string; end: string } | null>(null);
+    const [shiftErrors, setShiftErrors] = useState<Record<string, string[]>>({});
 
     const load = useCallback(async () => {
         const result = await apiFetch<CalendarShowData>(`/api/calendar/${date}`);
@@ -29,18 +47,45 @@ export default function CalendarDayPage({ params }: PageProps<"/calendar/[date]"
         await load();
     }
 
+    function openShiftForm(shift?: WorkSession) {
+        setShiftErrors({});
+        setShiftForm({
+            start: toLocalInputValue(shift?.scheduled_start_at ?? null, date, "09:00"),
+            end: toLocalInputValue(shift?.scheduled_end_at ?? null, date, "17:00"),
+        });
+    }
+
+    async function handleShiftSubmit(event: FormEvent<HTMLFormElement>, existing?: WorkSession) {
+        event.preventDefault();
+        if (!shiftForm) {
+            return;
+        }
+        setShiftErrors({});
+
+        const body = { scheduled_start_at: shiftForm.start, scheduled_end_at: shiftForm.end };
+
+        try {
+            if (existing) {
+                await apiFetch(`/api/shifts/${existing.id}`, { method: "PATCH", body });
+            } else {
+                await apiFetch("/api/shifts", { method: "POST", body });
+            }
+            setShiftForm(null);
+            await load();
+        } catch (error) {
+            if (error instanceof ApiError && error.errors) {
+                setShiftErrors(error.errors);
+            }
+        }
+    }
+
     if (!data) {
         return null;
     }
 
     const [year, month] = date.split("-");
-
-    function formatTime(iso: string | null): string {
-        if (!iso) {
-            return "—";
-        }
-        return new Date(iso).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-    }
+    const pendingShift = data.sessions.find((s) => !s.actual_start_at);
+    const workedSessions = data.sessions.filter((s) => s.actual_start_at);
 
     return (
         <div className="py-8">
@@ -53,11 +98,11 @@ export default function CalendarDayPage({ params }: PageProps<"/calendar/[date]"
                     « カレンダーに戻る
                 </Link>
 
-                {data.sessions.length === 0 && (
+                {workedSessions.length === 0 && !pendingShift && (
                     <div className="bg-white shadow rounded-lg p-6 text-gray-600">この日の勤務記録はありません。</div>
                 )}
 
-                {data.sessions.map((session) => (
+                {workedSessions.map((session) => (
                     <div key={session.id} className="bg-white shadow rounded-lg p-6">
                         <dl className="grid grid-cols-2 gap-4">
                             <div>
@@ -93,6 +138,77 @@ export default function CalendarDayPage({ params }: PageProps<"/calendar/[date]"
                         </div>
                     </div>
                 ))}
+
+                <div className="bg-white shadow rounded-lg p-6">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">シフト予定</h3>
+
+                    {pendingShift ? (
+                        <div className="flex items-center justify-between">
+                            <p className="text-gray-900">
+                                {formatTime(pendingShift.scheduled_start_at)}〜{formatTime(pendingShift.scheduled_end_at)}
+                            </p>
+                            <button
+                                onClick={() => openShiftForm(pendingShift)}
+                                className="text-sm text-indigo-600 hover:underline"
+                            >
+                                編集
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => openShiftForm()}
+                            className="text-sm text-indigo-600 hover:underline"
+                        >
+                            + シフトを追加
+                        </button>
+                    )}
+
+                    {shiftForm && (
+                        <form onSubmit={(e) => handleShiftSubmit(e, pendingShift)} className="mt-4 space-y-4">
+                            <div>
+                                <label className="block font-medium text-sm text-gray-700">出勤予定時刻</label>
+                                <input
+                                    type="datetime-local"
+                                    required
+                                    value={shiftForm.start}
+                                    onChange={(e) => setShiftForm({ ...shiftForm, start: e.target.value })}
+                                    className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                />
+                                {shiftErrors.scheduled_start_at && (
+                                    <p className="mt-1 text-sm text-red-600">{shiftErrors.scheduled_start_at[0]}</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block font-medium text-sm text-gray-700">退勤予定時刻</label>
+                                <input
+                                    type="datetime-local"
+                                    required
+                                    value={shiftForm.end}
+                                    onChange={(e) => setShiftForm({ ...shiftForm, end: e.target.value })}
+                                    className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                />
+                                {shiftErrors.scheduled_end_at && (
+                                    <p className="mt-1 text-sm text-red-600">{shiftErrors.scheduled_end_at[0]}</p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button
+                                    type="submit"
+                                    className="inline-flex items-center px-4 py-2 bg-gray-800 text-white text-xs font-semibold uppercase tracking-widest rounded-md"
+                                >
+                                    保存
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShiftForm(null)}
+                                    className="text-sm text-gray-500 hover:underline"
+                                >
+                                    キャンセル
+                                </button>
+                            </div>
+                        </form>
+                    )}
+                </div>
             </div>
         </div>
     );
