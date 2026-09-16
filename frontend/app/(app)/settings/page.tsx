@@ -83,10 +83,6 @@ export default function SettingsPage() {
 
     return (
         <div className="py-8">
-            <header className="bg-white shadow px-4 py-4">
-                <h2 className="font-semibold text-xl text-gray-800">設定</h2>
-            </header>
-
             <div className="px-4 pt-8 space-y-6">
                 <div className="p-4 bg-white shadow rounded-lg">
                     <h2 className="text-lg font-medium text-gray-900">アカウント</h2>

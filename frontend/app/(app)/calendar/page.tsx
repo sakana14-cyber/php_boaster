@@ -137,10 +137,6 @@ export default function CalendarPage() {
 
     return (
         <div className="py-8">
-            <header className="bg-white shadow px-4 py-4">
-                <h2 className="font-semibold text-xl text-gray-800">カレンダー</h2>
-            </header>
-
             <div className="px-4 pt-8 space-y-4">
                 <div className="bg-white shadow rounded-lg p-4">
                     <div className="flex items-center justify-between mb-4">
