@@ -10,12 +10,15 @@ export default function SettingsPage() {
     const { user, setUser, logout } = useAuth();
     const router = useRouter();
     const [specialWages, setSpecialWages] = useState<SpecialWage[]>([]);
-    const [form, setForm] = useState({
-        hourly_wage_default: 0,
-        hourly_wage_weekend_holiday: 0,
-        rounding_unit_shift: 1,
-        rounding_unit_edge: 1,
-    });
+    const emptyForm = {
+        hourly_wage_default: "",
+        hourly_wage_weekend_holiday: "",
+        rounding_unit_shift: "",
+        rounding_unit_edge: "",
+    };
+    const [form, setForm] = useState(emptyForm);
+    const [savedForm, setSavedForm] = useState(emptyForm);
+    const [isEditing, setIsEditing] = useState(false);
     const [wageForm, setWageForm] = useState({ title: "", start_time: "", end_time: "", hourly_wage: 0 });
     const [errors, setErrors] = useState<Record<string, string[]>>({});
     const [wageErrors, setWageErrors] = useState<Record<string, string[]>>({});
@@ -23,12 +26,14 @@ export default function SettingsPage() {
 
     const load = useCallback(async () => {
         const data = await apiFetch<{ user: User; special_wages: SpecialWage[] }>("/api/settings");
-        setForm({
-            hourly_wage_default: data.user.hourly_wage_default,
-            hourly_wage_weekend_holiday: data.user.hourly_wage_weekend_holiday,
-            rounding_unit_shift: data.user.rounding_unit_shift,
-            rounding_unit_edge: data.user.rounding_unit_edge,
-        });
+        const loaded = {
+            hourly_wage_default: String(data.user.hourly_wage_default),
+            hourly_wage_weekend_holiday: String(data.user.hourly_wage_weekend_holiday),
+            rounding_unit_shift: String(data.user.rounding_unit_shift),
+            rounding_unit_edge: String(data.user.rounding_unit_edge),
+        };
+        setForm(loaded);
+        setSavedForm(loaded);
         setSpecialWages(data.special_wages);
     }, []);
 
@@ -37,14 +42,42 @@ export default function SettingsPage() {
         load();
     }, [load]);
 
+    function handleStartEdit() {
+        setStatus(null);
+        setErrors({});
+        setIsEditing(true);
+    }
+
+    function handleCancelEdit() {
+        setForm(savedForm);
+        setErrors({});
+        setStatus(null);
+        setIsEditing(false);
+    }
+
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setErrors({});
         setStatus(null);
 
         try {
-            const data = await apiFetch<{ user: User }>("/api/settings", { method: "PATCH", body: form });
+            const body = {
+                hourly_wage_default: Number(form.hourly_wage_default) || 0,
+                hourly_wage_weekend_holiday: Number(form.hourly_wage_weekend_holiday) || 0,
+                rounding_unit_shift: Number(form.rounding_unit_shift) || 0,
+                rounding_unit_edge: Number(form.rounding_unit_edge) || 0,
+            };
+            const data = await apiFetch<{ user: User }>("/api/settings", { method: "PATCH", body });
             setUser(data.user);
+            const saved = {
+                hourly_wage_default: String(body.hourly_wage_default),
+                hourly_wage_weekend_holiday: String(body.hourly_wage_weekend_holiday),
+                rounding_unit_shift: String(body.rounding_unit_shift),
+                rounding_unit_edge: String(body.rounding_unit_edge),
+            };
+            setForm(saved);
+            setSavedForm(saved);
+            setIsEditing(false);
             setStatus("保存しました。");
         } catch (error) {
             if (error instanceof ApiError && error.errors) {
@@ -111,33 +144,56 @@ export default function SettingsPage() {
                             value={form.hourly_wage_default}
                             onChange={(v) => setForm({ ...form, hourly_wage_default: v })}
                             error={errors.hourly_wage_default?.[0]}
+                            disabled={!isEditing}
                         />
                         <Field
                             label="時給(土日祝)・円"
                             value={form.hourly_wage_weekend_holiday}
                             onChange={(v) => setForm({ ...form, hourly_wage_weekend_holiday: v })}
                             error={errors.hourly_wage_weekend_holiday?.[0]}
+                            disabled={!isEditing}
                         />
                         <Field
                             label="勤務中の切り捨て単位・分"
                             value={form.rounding_unit_shift}
                             onChange={(v) => setForm({ ...form, rounding_unit_shift: v })}
                             error={errors.rounding_unit_shift?.[0]}
+                            disabled={!isEditing}
                         />
                         <Field
                             label="出退勤打刻前後の切り捨て単位・分"
                             value={form.rounding_unit_edge}
                             onChange={(v) => setForm({ ...form, rounding_unit_edge: v })}
                             error={errors.rounding_unit_edge?.[0]}
+                            disabled={!isEditing}
                         />
 
                         <div className="flex items-center gap-4">
-                            <button
-                                type="submit"
-                                className="inline-flex items-center px-4 py-2 bg-[#FF7F50] text-white text-xs font-semibold uppercase tracking-widest rounded-md"
-                            >
-                                保存
-                            </button>
+                            {isEditing ? (
+                                <>
+                                    <button
+                                        type="submit"
+                                        className="inline-flex items-center px-4 py-2 bg-[#FF7F50] text-white text-xs font-semibold uppercase tracking-widest rounded-md"
+                                    >
+                                        保存
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleCancelEdit}
+                                        className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 text-xs font-semibold uppercase tracking-widest rounded-md"
+                                    >
+                                        キャンセル
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleStartEdit}
+                                    className="inline-flex items-center px-4 py-2 bg-[#FF7F50] text-white text-xs font-semibold uppercase tracking-widest rounded-md"
+                                >
+                                    編集
+                                </button>
+                            )}
                             {status && <p className="text-sm text-gray-600">{status}</p>}
                         </div>
                     </form>
@@ -241,22 +297,26 @@ function Field({
     value,
     onChange,
     error,
+    disabled,
 }: {
     label: string;
-    value: number;
-    onChange: (value: number) => void;
+    value: string;
+    onChange: (value: string) => void;
     error?: string;
+    disabled?: boolean;
 }) {
     return (
         <div>
             <label className="block font-medium text-sm text-gray-700">{label}</label>
             <input
                 type="number"
+                inputMode="numeric"
                 min={1}
                 required
                 value={value}
-                onChange={(e) => onChange(Number(e.target.value))}
-                className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
+                disabled={disabled}
+                onChange={(e) => onChange(e.target.value.replace(/^0+(?=\d)/, ""))}
+                className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm disabled:bg-gray-100 disabled:text-gray-500"
             />
             {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         </div>
