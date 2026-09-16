@@ -39,8 +39,10 @@ export default function WorkSessionEditPage({ params }: PageProps<"/work-session
                 method: "PUT",
                 body: { actual_start_at: actualStartAt, actual_end_at: actualEndAt },
             });
-            const date = data.work_session.actual_start_at?.slice(0, 10);
-            router.push(date ? `/calendar/${date}` : "/calendar");
+            const date = data.work_session.actual_start_at
+                ? new Date(data.work_session.actual_start_at)
+                : null;
+            router.push(date ? `/calendar?year=${date.getFullYear()}&month=${date.getMonth() + 1}` : "/calendar");
         } catch (error) {
             if (error instanceof ApiError && error.errors) {
                 setErrors(error.errors);

@@ -30,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/work-sessions/{workSession}', [WorkSessionEditController::class, 'update']);
     Route::delete('/work-sessions/{workSession}', [WorkSessionEditController::class, 'destroy']);
 
+    Route::get('/shifts/recent', [ShiftController::class, 'recent']);
     Route::post('/shifts', [ShiftController::class, 'store']);
     Route::patch('/shifts/{workSession}', [ShiftController::class, 'update']);
 
