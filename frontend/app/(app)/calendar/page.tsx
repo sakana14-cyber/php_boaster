@@ -148,7 +148,7 @@ export default function CalendarPage() {
                             onClick={() =>
                                 router.push(`/calendar?year=${prev.getFullYear()}&month=${prev.getMonth() + 1}`)
                             }
-                            className="text-indigo-600 hover:underline"
+                            className="text-[#FF7F50] hover:underline"
                         >
                             « 前月
                         </button>
@@ -159,7 +159,7 @@ export default function CalendarPage() {
                             onClick={() =>
                                 router.push(`/calendar?year=${next.getFullYear()}&month=${next.getMonth() + 1}`)
                             }
-                            className="text-indigo-600 hover:underline"
+                            className="text-[#FF7F50] hover:underline"
                         >
                             翌月 »
                         </button>
@@ -207,9 +207,9 @@ export default function CalendarPage() {
                                     onClick={() => setSelectedDate(dateString)}
                                     className={`relative aspect-square border rounded-md p-1 flex flex-col items-center justify-center hover:bg-gray-50 ${
                                         isSelected
-                                            ? "border-indigo-500 ring-1 ring-indigo-500"
+                                            ? "border-[#FF7F50] ring-1 ring-[#FF7F50]"
                                             : total
-                                              ? "border-indigo-300 bg-indigo-50"
+                                              ? "border-[#FFD5C2] bg-[#FFF1EC]"
                                               : "border-gray-100"
                                     }`}
                                 >
@@ -218,7 +218,7 @@ export default function CalendarPage() {
                                     )}
                                     <span className="text-sm text-gray-700">{day}</span>
                                     {total && (
-                                        <span className="text-[10px] text-indigo-600 font-semibold">
+                                        <span className="text-[10px] text-[#FF7F50] font-semibold">
                                             {total.earned_amount.toLocaleString("ja-JP")}円
                                         </span>
                                     )}
@@ -264,7 +264,7 @@ export default function CalendarPage() {
                                 <div className="mt-3 flex items-center gap-4">
                                     <button
                                         onClick={() => router.push(`/work-sessions/${session.id}/edit`)}
-                                        className="text-xs text-indigo-600 hover:underline"
+                                        className="text-xs text-[#FF7F50] hover:underline"
                                     >
                                         編集
                                     </button>
@@ -281,7 +281,7 @@ export default function CalendarPage() {
                         {!showAddPanel && (
                             <button
                                 onClick={() => setShowAddPanel(true)}
-                                className="w-full border border-dashed border-green-500 text-green-600 text-sm font-medium rounded-lg py-3"
+                                className="w-full border border-dashed border-[#FF7F50] text-[#FF7F50] text-sm font-medium rounded-lg py-3"
                             >
                                 + シフトを追加
                             </button>
@@ -313,7 +313,7 @@ export default function CalendarPage() {
                                 {!showManualForm ? (
                                     <button
                                         onClick={() => setShowManualForm(true)}
-                                        className="w-full bg-green-600 text-white text-sm font-semibold rounded-lg py-3"
+                                        className="w-full bg-[#FF7F50] text-white text-sm font-semibold rounded-lg py-3"
                                     >
                                         新規にシフトを入力する
                                     </button>
@@ -327,7 +327,7 @@ export default function CalendarPage() {
                                                 onChange={(e) =>
                                                     setManualForm({ ...manualForm, start: e.target.value })
                                                 }
-                                                className="block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                                className="block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
                                             />
                                         </div>
                                         <div>
@@ -338,7 +338,7 @@ export default function CalendarPage() {
                                                 onChange={(e) =>
                                                     setManualForm({ ...manualForm, end: e.target.value })
                                                 }
-                                                className="block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                                className="block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
                                             />
                                         </div>
                                         {errors.scheduled_end_at && (
@@ -346,7 +346,7 @@ export default function CalendarPage() {
                                         )}
                                         <button
                                             onClick={handleManualSubmit}
-                                            className="w-full bg-green-600 text-white text-sm font-semibold rounded-lg py-3"
+                                            className="w-full bg-[#FF7F50] text-white text-sm font-semibold rounded-lg py-3"
                                         >
                                             保存
                                         </button>

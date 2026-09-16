@@ -29,7 +29,7 @@ export function BottomNavigation() {
                             >
                                 <Icon
                                     className="h-7 w-7"
-                                    color={active ? "#DF4400" : "#898989"}
+                                    color={active ? "#FF7F50" : "#898989"}
                                     strokeWidth={2}
                                 />
                             </Link>

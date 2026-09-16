@@ -138,7 +138,7 @@ export default function SettingsPage() {
                         <div className="flex items-center gap-4">
                             <button
                                 type="submit"
-                                className="inline-flex items-center px-4 py-2 bg-gray-800 text-white text-xs font-semibold uppercase tracking-widest rounded-md"
+                                className="inline-flex items-center px-4 py-2 bg-[#FF7F50] text-white text-xs font-semibold uppercase tracking-widest rounded-md"
                             >
                                 保存
                             </button>
@@ -184,7 +184,7 @@ export default function SettingsPage() {
                                 placeholder="例: 深夜給"
                                 value={wageForm.title}
                                 onChange={(e) => setWageForm({ ...wageForm, title: e.target.value })}
-                                className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
                             />
                             {wageErrors.title && <p className="mt-2 text-sm text-red-600">{wageErrors.title[0]}</p>}
                         </div>
@@ -197,7 +197,7 @@ export default function SettingsPage() {
                                     required
                                     value={wageForm.start_time}
                                     onChange={(e) => setWageForm({ ...wageForm, start_time: e.target.value })}
-                                    className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                    className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
                                 />
                             </div>
                             <div>
@@ -207,7 +207,7 @@ export default function SettingsPage() {
                                     required
                                     value={wageForm.end_time}
                                     onChange={(e) => setWageForm({ ...wageForm, end_time: e.target.value })}
-                                    className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                    className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
                                 />
                             </div>
                         </div>
@@ -220,7 +220,7 @@ export default function SettingsPage() {
                                 required
                                 value={wageForm.hourly_wage}
                                 onChange={(e) => setWageForm({ ...wageForm, hourly_wage: Number(e.target.value) })}
-                                className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
                             />
                             {wageErrors.hourly_wage && (
                                 <p className="mt-2 text-sm text-red-600">{wageErrors.hourly_wage[0]}</p>
@@ -229,7 +229,7 @@ export default function SettingsPage() {
 
                         <button
                             type="submit"
-                            className="inline-flex items-center px-4 py-2 bg-gray-800 text-white text-xs font-semibold uppercase tracking-widest rounded-md"
+                            className="inline-flex items-center px-4 py-2 bg-[#FF7F50] text-white text-xs font-semibold uppercase tracking-widest rounded-md"
                         >
                             特別給を追加
                         </button>
@@ -260,7 +260,7 @@ function Field({
                 required
                 value={value}
                 onChange={(e) => onChange(Number(e.target.value))}
-                className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
             />
             {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         </div>
