@@ -18,12 +18,26 @@ class ClockIn
     {
         return DB::transaction(function () use ($user) {
             $hasActiveSession = $user->workSessions()
+                ->whereNotNull('actual_start_at')
                 ->whereNull('actual_end_at')
                 ->lockForUpdate()
                 ->exists();
 
             if ($hasActiveSession) {
                 throw new RuntimeException('既に出勤中です。');
+            }
+
+            $todaysShift = $user->workSessions()
+                ->whereNull('actual_start_at')
+                ->whereDate('scheduled_start_at', today())
+                ->orderBy('scheduled_start_at')
+                ->lockForUpdate()
+                ->first();
+
+            if ($todaysShift) {
+                $todaysShift->update(['actual_start_at' => now()]);
+
+                return $todaysShift;
             }
 
             return $user->workSessions()->create([
