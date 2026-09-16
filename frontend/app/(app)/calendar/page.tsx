@@ -22,6 +22,7 @@ export default function CalendarPage() {
     const now = new Date();
     const year = Number(searchParams.get("year") ?? now.getFullYear());
     const month = Number(searchParams.get("month") ?? now.getMonth() + 1);
+    const todayString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     const [data, setData] = useState<CalendarIndexData | null>(null);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -196,6 +197,7 @@ export default function CalendarPage() {
                             const total = data.daily_totals[dateString];
                             const hasShift = data.shift_days.includes(dateString);
                             const isSelected = dateString === selectedDate;
+                            const isToday = dateString === todayString;
 
                             return (
                                 <button
@@ -212,7 +214,11 @@ export default function CalendarPage() {
                                     {hasShift && (
                                         <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-orange-400" />
                                     )}
-                                    <span className="text-sm text-gray-700">{day}</span>
+                                    <span
+                                        className={`text-sm ${isToday ? "text-[#FF7F50] font-semibold" : "text-gray-700"}`}
+                                    >
+                                        {day}
+                                    </span>
                                 </button>
                             );
                         })}
