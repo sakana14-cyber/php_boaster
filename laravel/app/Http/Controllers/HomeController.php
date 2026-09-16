@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Contracts\View\View;
+use App\Http\Resources\WorkSessionResource;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user();
 
@@ -20,9 +21,9 @@ class HomeController extends Controller
             ->whereNotNull('earned_amount')
             ->sum('earned_amount');
 
-        return view('dashboard', [
-            'activeSession' => $activeSession,
-            'todayEarnedAmount' => $todayEarnedAmount,
+        return response()->json([
+            'active_session' => $activeSession ? new WorkSessionResource($activeSession) : null,
+            'today_earned_amount' => $todayEarnedAmount,
         ]);
     }
 }

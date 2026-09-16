@@ -3,31 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateSettingsRequest;
-use Illuminate\Http\RedirectResponse;
+use App\Http\Resources\SpecialWageResource;
+use App\Http\Resources\UserResource;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Redirect;
-use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
     /**
-     * Display the user's wage and rounding settings form.
+     * ログインユーザーの時給・丸め設定と特別給一覧を返す。
      */
-    public function edit(Request $request): View
+    public function edit(Request $request): JsonResponse
     {
-        return view('settings.edit', [
-            'user' => $request->user(),
-            'specialWages' => $request->user()->specialWages,
+        return response()->json([
+            'user' => new UserResource($request->user()),
+            'special_wages' => SpecialWageResource::collection($request->user()->specialWages),
         ]);
     }
 
     /**
-     * Update the user's wage and rounding settings.
+     * ログインユーザーの時給・丸め設定を更新する。
      */
-    public function update(UpdateSettingsRequest $request): RedirectResponse
+    public function update(UpdateSettingsRequest $request): JsonResponse
     {
         $request->user()->update($request->validated());
 
-        return Redirect::route('settings.edit')->with('status', 'settings-updated');
+        return response()->json(['user' => new UserResource($request->user())]);
     }
 }

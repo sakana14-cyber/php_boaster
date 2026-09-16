@@ -16,13 +16,13 @@ class SettingsTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->patch(route('settings.update'), [
+            ->patchJson('/api/settings', [
                 'hourly_wage_default' => 1300,
                 'hourly_wage_weekend_holiday' => 1600,
                 'rounding_unit_shift' => 15,
                 'rounding_unit_edge' => 5,
             ])
-            ->assertRedirect(route('settings.edit'));
+            ->assertOk();
 
         $user->refresh();
         $this->assertSame(1300, $user->hourly_wage_default);
@@ -36,13 +36,14 @@ class SettingsTest extends TestCase
         $user = User::factory()->create(['hourly_wage_default' => 1200]);
 
         $this->actingAs($user)
-            ->patch(route('settings.update'), [
+            ->patchJson('/api/settings', [
                 'hourly_wage_default' => 0,
                 'hourly_wage_weekend_holiday' => 1200,
                 'rounding_unit_shift' => 1,
                 'rounding_unit_edge' => 1,
             ])
-            ->assertSessionHasErrors('hourly_wage_default');
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('hourly_wage_default');
 
         $this->assertSame(1200, $user->fresh()->hourly_wage_default);
     }
@@ -52,13 +53,14 @@ class SettingsTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->patch(route('settings.update'), [
+            ->patchJson('/api/settings', [
                 'hourly_wage_default' => 1200.5,
                 'hourly_wage_weekend_holiday' => 1200,
                 'rounding_unit_shift' => 1,
                 'rounding_unit_edge' => 1,
             ])
-            ->assertSessionHasErrors('hourly_wage_default');
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('hourly_wage_default');
     }
 
     public function test_user_can_create_and_delete_a_special_wage(): void
@@ -66,20 +68,20 @@ class SettingsTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post(route('special-wages.store'), [
+            ->postJson('/api/special-wages', [
                 'title' => '深夜給',
                 'start_time' => '22:00',
                 'end_time' => '05:00',
                 'hourly_wage' => 1500,
             ])
-            ->assertRedirect(route('settings.edit'));
+            ->assertCreated();
 
         $specialWage = $user->specialWages()->firstOrFail();
         $this->assertSame('深夜給', $specialWage->title);
 
         $this->actingAs($user)
-            ->delete(route('special-wages.destroy', $specialWage))
-            ->assertRedirect(route('settings.edit'));
+            ->deleteJson("/api/special-wages/{$specialWage->id}")
+            ->assertNoContent();
 
         $this->assertSame(0, $user->specialWages()->count());
     }
@@ -91,7 +93,7 @@ class SettingsTest extends TestCase
         $specialWage = SpecialWage::factory()->for($owner)->create();
 
         $this->actingAs($intruder)
-            ->delete(route('special-wages.destroy', $specialWage))
+            ->deleteJson("/api/special-wages/{$specialWage->id}")
             ->assertForbidden();
 
         $this->assertSame(1, $owner->specialWages()->count());

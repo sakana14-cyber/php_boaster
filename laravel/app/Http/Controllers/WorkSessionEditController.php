@@ -3,13 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateWorkSessionRequest;
+use App\Http\Resources\WorkSessionResource;
 use App\Models\WorkSession;
 use App\Services\SalaryCalculator;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Redirect;
-use Illuminate\View\View;
 
 class WorkSessionEditController extends Controller
 {
@@ -17,16 +16,14 @@ class WorkSessionEditController extends Controller
         private readonly SalaryCalculator $salaryCalculator,
     ) {}
 
-    public function edit(WorkSession $workSession): View
+    public function show(WorkSession $workSession): JsonResponse
     {
         Gate::authorize('update', $workSession);
 
-        return view('work-sessions.edit', [
-            'workSession' => $workSession,
-        ]);
+        return response()->json(['work_session' => new WorkSessionResource($workSession)]);
     }
 
-    public function update(UpdateWorkSessionRequest $request, WorkSession $workSession): RedirectResponse
+    public function update(UpdateWorkSessionRequest $request, WorkSession $workSession): JsonResponse
     {
         Gate::authorize('update', $workSession);
 
@@ -44,18 +41,15 @@ class WorkSessionEditController extends Controller
             ),
         ]);
 
-        return Redirect::route('calendar.show', $workSession->actual_start_at->toDateString())
-            ->with('status', 'work-session-updated');
+        return response()->json(['work_session' => new WorkSessionResource($workSession)]);
     }
 
-    public function destroy(WorkSession $workSession): RedirectResponse
+    public function destroy(WorkSession $workSession): JsonResponse
     {
         Gate::authorize('delete', $workSession);
 
-        $date = $workSession->actual_start_at?->toDateString() ?? now()->toDateString();
-
         $workSession->delete();
 
-        return Redirect::route('calendar.show', $date)->with('status', 'work-session-deleted');
+        return response()->json(null, 204);
     }
 }
