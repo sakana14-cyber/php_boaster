@@ -151,8 +151,12 @@ export default function DashboardPage() {
         return FALLBACK_SHIFT_SECONDS;
     })();
 
-    const progressRatio = activeSession ? Math.min(1, elapsedSeconds / shiftSeconds) : 0;
-    const dashOffset = RING_CIRCUMFERENCE * (1 - progressRatio);
+    const totalRatio = activeSession ? elapsedSeconds / shiftSeconds : 0;
+    const hasLapped = totalRatio > 1;
+    // 100%を超えたら周回分を差し引いた「今週目」の進捗だけを描画し、
+    // 満周の土台リングに重ねてApple Watchのアクティビティリングのような重なりを表現する。
+    const currentLapRatio = hasLapped ? totalRatio % 1 || 1 : Math.min(1, totalRatio);
+    const dashOffset = RING_CIRCUMFERENCE * (1 - currentLapRatio);
 
     const amountText = activeSession ? predicted : 0;
     const timeText = activeSession ? formatElapsedTime(elapsedSeconds) : "00:00:00";
@@ -171,7 +175,22 @@ export default function DashboardPage() {
                                 <stop offset="0%" stopColor="#DF4400" />
                                 <stop offset="100%" stopColor="#FFD17F" />
                             </linearGradient>
+                            <filter id="ring-overlap-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#000000" floodOpacity="0.35" />
+                            </filter>
                         </defs>
+
+                        {hasLapped && (
+                            <circle
+                                cx="190"
+                                cy="190"
+                                r={RING_RADIUS}
+                                fill="none"
+                                stroke="url(#ring-gradient)"
+                                strokeWidth="20"
+                            />
+                        )}
+
                         <circle
                             cx="190"
                             cy="190"
@@ -182,6 +201,7 @@ export default function DashboardPage() {
                             strokeLinecap="round"
                             strokeDasharray={RING_CIRCUMFERENCE}
                             strokeDashoffset={dashOffset}
+                            filter={hasLapped ? "url(#ring-overlap-shadow)" : undefined}
                         />
                     </svg>
                 )}
