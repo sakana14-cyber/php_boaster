@@ -28,7 +28,7 @@ app/
 ├── login/, register/          # 未認証時の画面
 ├── (app)/                     # 認証必須画面(下部タブナビゲーション付き)
 │   ├── dashboard/             # ホーム(出退勤・リアルタイム予測給与)
-│   ├── calendar/[date]?/      # カレンダー・日別明細
+│   ├── calendar/              # カレンダー・日別明細(日付はページ内stateで管理、ページ遷移なし)
 │   ├── settings/              # 時給・特別給・丸め設定
 │   └── work-sessions/[id]/edit/  # 勤務記録の編集
 context/AuthContext.tsx        # ログイン状態の管理(/api/me を参照)
