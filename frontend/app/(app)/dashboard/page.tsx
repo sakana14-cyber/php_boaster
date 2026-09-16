@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Play, Pause } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { formatElapsedTime, predictSalary } from "@/lib/salary";
@@ -157,7 +158,7 @@ export default function DashboardPage() {
     const timeText = activeSession ? formatElapsedTime(elapsedSeconds) : "00:00:00";
 
     return (
-        <div className="py-12 flex flex-col items-center gap-6">
+        <div className="min-h-screen bg-white py-12 flex flex-col items-center justify-center gap-6">
             {error && (
                 <div className="mx-4 bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">{error}</div>
             )}
@@ -193,7 +194,7 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            <div className="flex items-center justify-center gap-12">
+            <div className="w-[300px] flex items-center justify-between">
                 {activeSession ? (
                     <>
                         <button
@@ -207,35 +208,25 @@ export default function DashboardPage() {
                             onClick={togglePause}
                             className="h-14 w-14 rounded-full bg-[#EBEBEB] flex items-center justify-center text-[#898989]"
                         >
-                            {isPaused ? <PlayIcon /> : <PauseIcon />}
+                            {isPaused ? (
+                                <Play className="h-6 w-6" strokeWidth={2} />
+                            ) : (
+                                <Pause className="h-6 w-6" strokeWidth={2} />
+                            )}
                         </button>
                     </>
                 ) : (
-                    <button
-                        onClick={handleClockIn}
-                        disabled={submitting}
-                        className="h-14 w-14 rounded-full bg-[#EBEBEB] flex items-center justify-center text-[#898989] disabled:opacity-60"
-                    >
-                        <PlayIcon />
-                    </button>
+                    <div className="w-full flex justify-end">
+                        <button
+                            onClick={handleClockIn}
+                            disabled={submitting}
+                            className="h-14 w-14 rounded-full bg-[#EBEBEB] flex items-center justify-center text-[#898989] disabled:opacity-60"
+                        >
+                            <Play className="h-6 w-6" strokeWidth={2} />
+                        </button>
+                    </div>
                 )}
             </div>
         </div>
-    );
-}
-
-function PlayIcon() {
-    return (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 3l14 9-14 9V3z" />
-        </svg>
-    );
-}
-
-function PauseIcon() {
-    return (
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 5v14M16 5v14" />
-        </svg>
     );
 }

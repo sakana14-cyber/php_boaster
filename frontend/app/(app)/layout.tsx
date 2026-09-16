@@ -20,7 +20,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     }
 
     return (
-        <div className="min-h-screen max-w-md mx-auto bg-gray-100 pb-20 shadow-xl">
+        <div className="min-h-screen max-w-md mx-auto bg-white pb-20 shadow-xl">
             {children}
             <BottomNavigation />
         </div>
