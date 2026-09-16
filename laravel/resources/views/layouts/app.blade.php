@@ -12,8 +12,6 @@
     </head>
     <body class="font-sans antialiased bg-gray-200">
         <div class="min-h-screen max-w-md mx-auto bg-gray-100 pb-20 shadow-xl">
-            @include('layouts.navigation')
-
             <!-- Page Heading -->
             @isset($header)
                 <header class="bg-white shadow">

@@ -10,6 +10,31 @@
             <div class="p-4 bg-white shadow rounded-lg">
                 <section>
                     <header>
+                        <h2 class="text-lg font-medium text-gray-900">アカウント</h2>
+                    </header>
+
+                    <div class="mt-4 flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-gray-900">{{ $user->name }}</p>
+                            <p class="text-sm text-gray-600">{{ $user->email }}</p>
+                        </div>
+                        <a href="{{ route('profile.edit') }}" class="text-sm text-indigo-600 hover:underline">
+                            プロフィール編集
+                        </a>
+                    </div>
+
+                    <form method="POST" action="{{ route('logout') }}" class="mt-4">
+                        @csrf
+                        <button type="submit" class="text-sm text-red-600 hover:underline">
+                            {{ __('ログアウト') }}
+                        </button>
+                    </form>
+                </section>
+            </div>
+
+            <div class="p-4 bg-white shadow rounded-lg">
+                <section>
+                    <header>
                         <h2 class="text-lg font-medium text-gray-900">時給・丸め設定</h2>
                         <p class="mt-1 text-sm text-gray-600">
                             変更後の設定は今後の勤務にのみ適用され、確定済みの過去の給与には影響しません。
@@ -19,11 +44,6 @@
                     <form method="post" action="{{ route('settings.update') }}" class="mt-6 space-y-6">
                         @csrf
                         @method('patch')
-
-                        <div>
-                            <x-input-label>ユーザー名</x-input-label>
-                            <p class="mt-1 text-gray-900">{{ $user->name }}</p>
-                        </div>
 
                         <div>
                             <x-input-label for="hourly_wage_default" value="時給(基本給)・円" />
