@@ -61,6 +61,31 @@ class ShiftTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_recent_shifts_returns_unique_time_pairs_in_recency_order(): void
+    {
+        $user = User::factory()->create();
+
+        $user->workSessions()->create([
+            'scheduled_start_at' => '2026-09-01 09:00:00',
+            'scheduled_end_at' => '2026-09-01 17:00:00',
+        ]);
+        $user->workSessions()->create([
+            'scheduled_start_at' => '2026-09-05 09:00:00',
+            'scheduled_end_at' => '2026-09-05 17:00:00',
+        ]);
+        $user->workSessions()->create([
+            'scheduled_start_at' => '2026-09-10 18:00:00',
+            'scheduled_end_at' => '2026-09-10 22:00:00',
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/shifts/recent');
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'shifts');
+        $response->assertJsonPath('shifts.0', ['start_time' => '18:00', 'end_time' => '22:00']);
+        $response->assertJsonPath('shifts.1', ['start_time' => '09:00', 'end_time' => '17:00']);
+    }
+
     public function test_user_cannot_update_another_users_shift(): void
     {
         $owner = User::factory()->create();
