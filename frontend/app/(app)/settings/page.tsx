@@ -28,7 +28,8 @@ export default function SettingsPage() {
         const data = await apiFetch<{ user: User; special_wages: SpecialWage[] }>("/api/settings");
         const loaded = {
             hourly_wage_default: String(data.user.hourly_wage_default),
-            hourly_wage_weekend_holiday: String(data.user.hourly_wage_weekend_holiday),
+            hourly_wage_weekend_holiday:
+                data.user.hourly_wage_weekend_holiday === null ? "" : String(data.user.hourly_wage_weekend_holiday),
             rounding_unit_shift: String(data.user.rounding_unit_shift),
             rounding_unit_edge: String(data.user.rounding_unit_edge),
         };
@@ -63,7 +64,8 @@ export default function SettingsPage() {
         try {
             const body = {
                 hourly_wage_default: Number(form.hourly_wage_default) || 0,
-                hourly_wage_weekend_holiday: Number(form.hourly_wage_weekend_holiday) || 0,
+                hourly_wage_weekend_holiday:
+                    form.hourly_wage_weekend_holiday === "" ? null : Number(form.hourly_wage_weekend_holiday),
                 rounding_unit_shift: Number(form.rounding_unit_shift) || 0,
                 rounding_unit_edge: Number(form.rounding_unit_edge) || 0,
             };
@@ -71,7 +73,7 @@ export default function SettingsPage() {
             setUser(data.user);
             const saved = {
                 hourly_wage_default: String(body.hourly_wage_default),
-                hourly_wage_weekend_holiday: String(body.hourly_wage_weekend_holiday),
+                hourly_wage_weekend_holiday: body.hourly_wage_weekend_holiday === null ? "" : String(body.hourly_wage_weekend_holiday),
                 rounding_unit_shift: String(body.rounding_unit_shift),
                 rounding_unit_edge: String(body.rounding_unit_edge),
             };
@@ -150,11 +152,12 @@ export default function SettingsPage() {
                             disabled={!isEditing}
                         />
                         <Field
-                            label="時給(土日祝)・円"
+                            label="時給(土日祝)・円(空欄で未設定・基本給を適用)"
                             value={form.hourly_wage_weekend_holiday}
                             onChange={(v) => setForm({ ...form, hourly_wage_weekend_holiday: v })}
                             error={errors.hourly_wage_weekend_holiday?.[0]}
                             disabled={!isEditing}
+                            required={false}
                         />
                         <Field
                             label="勤務中の切り捨て単位・分"
@@ -293,12 +296,14 @@ function Field({
     onChange,
     error,
     disabled,
+    required = true,
 }: {
     label: string;
     value: string;
     onChange: (value: string) => void;
     error?: string;
     disabled?: boolean;
+    required?: boolean;
 }) {
     return (
         <div>
@@ -307,7 +312,7 @@ function Field({
                 type="number"
                 inputMode="numeric"
                 min={1}
-                required
+                required={required}
                 value={value}
                 disabled={disabled}
                 onChange={(e) => onChange(e.target.value.replace(/^0+(?=\d)/, ""))}

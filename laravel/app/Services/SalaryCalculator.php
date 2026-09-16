@@ -138,7 +138,7 @@ class SalaryCalculator
             }
         }
 
-        if ($this->isWeekendOrHoliday($midpoint)) {
+        if ($this->isWeekendOrHoliday($midpoint) && $user->hourly_wage_weekend_holiday !== null) {
             return $user->hourly_wage_weekend_holiday;
         }
 

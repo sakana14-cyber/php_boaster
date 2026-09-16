@@ -31,6 +31,22 @@ class SettingsTest extends TestCase
         $this->assertSame(5, $user->rounding_unit_edge);
     }
 
+    public function test_user_can_clear_weekend_holiday_wage(): void
+    {
+        $user = User::factory()->create(['hourly_wage_weekend_holiday' => 1600]);
+
+        $this->actingAs($user)
+            ->patchJson('/api/settings', [
+                'hourly_wage_default' => 1300,
+                'hourly_wage_weekend_holiday' => null,
+                'rounding_unit_shift' => 15,
+                'rounding_unit_edge' => 5,
+            ])
+            ->assertOk();
+
+        $this->assertNull($user->fresh()->hourly_wage_weekend_holiday);
+    }
+
     public function test_settings_rejects_zero_or_negative_wage(): void
     {
         $user = User::factory()->create(['hourly_wage_default' => 1200]);

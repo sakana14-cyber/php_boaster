@@ -16,7 +16,7 @@ class UpdateSettingsRequest extends FormRequest
     {
         return [
             'hourly_wage_default' => ['required', 'integer', 'min:1'],
-            'hourly_wage_weekend_holiday' => ['required', 'integer', 'min:1'],
+            'hourly_wage_weekend_holiday' => ['nullable', 'integer', 'min:1'],
             'rounding_unit_shift' => ['required', 'integer', 'min:1'],
             'rounding_unit_edge' => ['required', 'integer', 'min:1'],
         ];

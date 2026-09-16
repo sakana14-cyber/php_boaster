@@ -3,7 +3,7 @@ export type User = {
     name: string;
     email: string;
     hourly_wage_default: number;
-    hourly_wage_weekend_holiday: number;
+    hourly_wage_weekend_holiday: number | null;
     rounding_unit_shift: number;
     rounding_unit_edge: number;
 };
