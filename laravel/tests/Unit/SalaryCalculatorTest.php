@@ -85,6 +85,23 @@ class SalaryCalculatorTest extends TestCase
         $this->assertSame(1500, $salary);
     }
 
+    public function test_default_wage_is_applied_on_saturday_when_weekend_holiday_wage_is_unset(): void
+    {
+        $user = User::factory()->create([
+            'hourly_wage_default' => 1000,
+            'hourly_wage_weekend_holiday' => null,
+        ]);
+
+        // 2026-09-19 is a Saturday.
+        $salary = $this->calculator->calculate(
+            $user,
+            Carbon::parse('2026-09-19 09:00:00'),
+            Carbon::parse('2026-09-19 10:00:00'),
+        );
+
+        $this->assertSame(1000, $salary);
+    }
+
     public function test_special_wage_overrides_base_wage_for_overlapping_time(): void
     {
         $user = User::factory()->create([

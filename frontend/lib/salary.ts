@@ -37,7 +37,11 @@ function resolveHourlyWageAt(moment: Date, user: User, specialWages: SpecialWage
         }
     }
 
-    return isWeekend(moment) ? user.hourly_wage_weekend_holiday : user.hourly_wage_default;
+    if (isWeekend(moment) && user.hourly_wage_weekend_holiday !== null) {
+        return user.hourly_wage_weekend_holiday;
+    }
+
+    return user.hourly_wage_default;
 }
 
 export function predictSalary(
