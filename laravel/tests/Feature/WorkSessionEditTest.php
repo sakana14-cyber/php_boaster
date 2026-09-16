@@ -21,11 +21,12 @@ class WorkSessionEditTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->put(route('work-sessions.edit.update', $session), [
+            ->putJson("/api/work-sessions/{$session->id}", [
                 'actual_start_at' => '2026-09-14T09:00',
                 'actual_end_at' => '2026-09-14T11:00',
             ])
-            ->assertRedirect(route('calendar.show', '2026-09-14'));
+            ->assertOk()
+            ->assertJsonPath('work_session.earned_amount', 2000);
 
         $this->assertSame(2000, $session->fresh()->earned_amount);
     }
@@ -40,8 +41,8 @@ class WorkSessionEditTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->delete(route('work-sessions.destroy', $session))
-            ->assertRedirect();
+            ->deleteJson("/api/work-sessions/{$session->id}")
+            ->assertNoContent();
 
         $this->assertSame(0, $user->workSessions()->count());
     }
@@ -57,11 +58,11 @@ class WorkSessionEditTest extends TestCase
         ]);
 
         $this->actingAs($intruder)
-            ->get(route('work-sessions.edit', $session))
+            ->getJson("/api/work-sessions/{$session->id}")
             ->assertForbidden();
 
         $this->actingAs($intruder)
-            ->delete(route('work-sessions.destroy', $session))
+            ->deleteJson("/api/work-sessions/{$session->id}")
             ->assertForbidden();
 
         $this->assertSame(1, $owner->workSessions()->count());

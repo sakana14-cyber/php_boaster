@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Models\WorkSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,8 +17,8 @@ class WorkSessionTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->post(route('work-sessions.store'))
-            ->assertRedirect(route('dashboard'));
+            ->postJson('/api/work-sessions')
+            ->assertCreated();
 
         $session = $user->fresh()->workSessions()->firstOrFail();
         $this->assertNotNull($session->actual_start_at);
@@ -28,8 +27,8 @@ class WorkSessionTest extends TestCase
         $session->forceFill(['actual_start_at' => now()->subHour()])->save();
 
         $this->actingAs($user)
-            ->patch(route('work-sessions.update', $session))
-            ->assertRedirect(route('dashboard'));
+            ->patchJson("/api/work-sessions/{$session->id}")
+            ->assertOk();
 
         $session->refresh();
         $this->assertNotNull($session->actual_end_at);
@@ -42,9 +41,9 @@ class WorkSessionTest extends TestCase
         $user->workSessions()->create(['actual_start_at' => now()]);
 
         $this->actingAs($user)
-            ->post(route('work-sessions.store'))
-            ->assertRedirect(route('dashboard'))
-            ->assertSessionHasErrors('work_session');
+            ->postJson('/api/work-sessions')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('work_session');
 
         $this->assertSame(1, $user->workSessions()->count());
     }
@@ -59,9 +58,9 @@ class WorkSessionTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->patch(route('work-sessions.update', $session))
-            ->assertRedirect(route('dashboard'))
-            ->assertSessionHasErrors('work_session');
+            ->patchJson("/api/work-sessions/{$session->id}")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('work_session');
     }
 
     public function test_user_cannot_clock_out_another_users_session(): void
@@ -71,26 +70,25 @@ class WorkSessionTest extends TestCase
         $session = $owner->workSessions()->create(['actual_start_at' => now()]);
 
         $this->actingAs($intruder)
-            ->patch(route('work-sessions.update', $session))
+            ->patchJson("/api/work-sessions/{$session->id}")
             ->assertForbidden();
 
         $this->assertNull($session->fresh()->actual_end_at);
     }
 
-    public function test_dashboard_restores_active_session_state_after_reload(): void
+    public function test_dashboard_returns_active_session_state(): void
     {
         $user = User::factory()->create();
         $session = $user->workSessions()->create(['actual_start_at' => now()]);
 
         $this->actingAs($user)
-            ->get(route('dashboard'))
+            ->getJson('/api/dashboard')
             ->assertOk()
-            ->assertViewHas('activeSession', fn (WorkSession $active) => $active->is($session));
+            ->assertJsonPath('active_session.id', $session->id);
     }
 
     public function test_guest_cannot_clock_in(): void
     {
-        $this->post(route('work-sessions.store'))
-            ->assertRedirect(route('login'));
+        $this->postJson('/api/work-sessions')->assertUnauthorized();
     }
 }
