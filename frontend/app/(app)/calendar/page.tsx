@@ -206,9 +206,11 @@ export default function CalendarPage() {
                                     className={`relative aspect-square border rounded-md p-1 flex flex-col items-center justify-center hover:bg-gray-50 ${
                                         isSelected
                                             ? "border-[#FF7F50] ring-1 ring-[#FF7F50]"
-                                            : total
-                                              ? "border-[#FFD5C2] bg-[#FFF1EC]"
-                                              : "border-gray-100"
+                                            : isToday
+                                              ? "border-gray-100"
+                                              : total
+                                                ? "border-[#FFD5C2] bg-[#FFF1EC]"
+                                                : "border-gray-100"
                                     }`}
                                 >
                                     {hasShift && (
