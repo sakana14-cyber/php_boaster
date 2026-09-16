@@ -19,7 +19,7 @@ export default function SettingsPage() {
     const [form, setForm] = useState(emptyForm);
     const [savedForm, setSavedForm] = useState(emptyForm);
     const [isEditing, setIsEditing] = useState(false);
-    const [wageForm, setWageForm] = useState({ title: "", start_time: "", end_time: "", hourly_wage: 0 });
+    const [wageForm, setWageForm] = useState({ title: "", start_time: "", end_time: "", hourly_wage: "" });
     const [errors, setErrors] = useState<Record<string, string[]>>({});
     const [wageErrors, setWageErrors] = useState<Record<string, string[]>>({});
     const [status, setStatus] = useState<string | null>(null);
@@ -91,8 +91,11 @@ export default function SettingsPage() {
         setWageErrors({});
 
         try {
-            await apiFetch("/api/special-wages", { method: "POST", body: wageForm });
-            setWageForm({ title: "", start_time: "", end_time: "", hourly_wage: 0 });
+            await apiFetch("/api/special-wages", {
+                method: "POST",
+                body: { ...wageForm, hourly_wage: Number(wageForm.hourly_wage) || 0 },
+            });
+            setWageForm({ title: "", start_time: "", end_time: "", hourly_wage: "" });
             await load();
         } catch (error) {
             if (error instanceof ApiError && error.errors) {
@@ -264,20 +267,12 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block font-medium text-sm text-gray-700">時給・円</label>
-                            <input
-                                type="number"
-                                min={1}
-                                required
-                                value={wageForm.hourly_wage}
-                                onChange={(e) => setWageForm({ ...wageForm, hourly_wage: Number(e.target.value) })}
-                                className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
-                            />
-                            {wageErrors.hourly_wage && (
-                                <p className="mt-2 text-sm text-red-600">{wageErrors.hourly_wage[0]}</p>
-                            )}
-                        </div>
+                        <Field
+                            label="時給・円"
+                            value={wageForm.hourly_wage}
+                            onChange={(v) => setWageForm({ ...wageForm, hourly_wage: v })}
+                            error={wageErrors.hourly_wage?.[0]}
+                        />
 
                         <button
                             type="submit"
