@@ -60,7 +60,7 @@ export default function RegisterPage() {
                                 type="text"
                                 required
                                 autoFocus
-                                autoComplete="name"
+                                autoComplete="off"
                                 placeholder="ユーザー名を入力してください"
                                 value={name}
                                 onChange={(event) => setName(event.target.value)}
@@ -77,7 +77,7 @@ export default function RegisterPage() {
                                 id="email"
                                 type="email"
                                 required
-                                autoComplete="username"
+                                autoComplete="off"
                                 placeholder="メールアドレスを入力してください"
                                 value={email}
                                 onChange={(event) => setEmail(event.target.value)}
