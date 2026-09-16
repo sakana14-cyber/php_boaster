@@ -213,11 +213,6 @@ export default function CalendarPage() {
                                         <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-orange-400" />
                                     )}
                                     <span className="text-sm text-gray-700">{day}</span>
-                                    {total && (
-                                        <span className="text-[10px] text-[#FF7F50] font-semibold">
-                                            {total.earned_amount.toLocaleString("ja-JP")}円
-                                        </span>
-                                    )}
                                 </button>
                             );
                         })}
