@@ -154,7 +154,7 @@ export default function DashboardPage() {
     const progressRatio = activeSession ? Math.min(1, elapsedSeconds / shiftSeconds) : 0;
     const dashOffset = RING_CIRCUMFERENCE * (1 - progressRatio);
 
-    const amountText = activeSession ? predicted : data.today_earned_amount;
+    const amountText = activeSession ? predicted : 0;
     const timeText = activeSession ? formatElapsedTime(elapsedSeconds) : "00:00:00";
 
     return (
