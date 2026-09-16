@@ -239,7 +239,7 @@ export default function SettingsPage() {
                                 placeholder="例: 深夜給"
                                 value={wageForm.title}
                                 onChange={(e) => setWageForm({ ...wageForm, title: e.target.value })}
-                                className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
+                                className="mt-1 block w-full px-3 py-2 border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
                             />
                             {wageErrors.title && <p className="mt-2 text-sm text-red-600">{wageErrors.title[0]}</p>}
                         </div>
@@ -252,7 +252,7 @@ export default function SettingsPage() {
                                     required
                                     value={wageForm.start_time}
                                     onChange={(e) => setWageForm({ ...wageForm, start_time: e.target.value })}
-                                    className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
+                                    className="mt-1 block w-full px-3 py-2 border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
                                 />
                             </div>
                             <div>
@@ -262,7 +262,7 @@ export default function SettingsPage() {
                                     required
                                     value={wageForm.end_time}
                                     onChange={(e) => setWageForm({ ...wageForm, end_time: e.target.value })}
-                                    className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
+                                    className="mt-1 block w-full px-3 py-2 border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm"
                                 />
                             </div>
                         </div>
@@ -311,7 +311,7 @@ function Field({
                 value={value}
                 disabled={disabled}
                 onChange={(e) => onChange(e.target.value.replace(/^0+(?=\d)/, ""))}
-                className="mt-1 block w-full border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm disabled:bg-gray-100 disabled:text-gray-500"
+                className="mt-1 block w-full px-3 py-2 border-gray-300 focus:border-[#FF7F50] focus:ring-[#FF7F50] rounded-md shadow-sm disabled:bg-gray-100 disabled:text-gray-500"
             />
             {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         </div>
