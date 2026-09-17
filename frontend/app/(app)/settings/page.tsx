@@ -120,7 +120,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="py-8">
+        <div className="min-h-screen py-8">
             <div className="px-4 pt-8 space-y-6">
                 <div className="p-4 bg-white shadow rounded-lg">
                     <h2 className="text-lg font-medium text-gray-900">アカウント</h2>

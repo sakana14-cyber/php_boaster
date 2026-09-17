@@ -207,7 +207,7 @@ export default function CalendarPage() {
         : null;
 
     return (
-        <div className="py-8">
+        <div className="min-h-screen py-8">
             <div className="px-4 pt-8 space-y-4">
                 <div className="bg-white shadow rounded-lg p-4">
                     <div className="flex items-center justify-between mb-4">
