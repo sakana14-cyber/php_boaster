@@ -36,8 +36,11 @@ class ShiftTest extends TestCase
 
         $this->actingAs($user)->postJson('/api/work-sessions')->assertCreated();
 
-        $this->assertSame(1, $user->workSessions()->count());
-        $this->assertNotNull($shift->fresh()->actual_start_at);
+        $this->assertSame(2, $user->workSessions()->count());
+        $this->assertNull($shift->fresh()->actual_start_at);
+
+        $attendance = $user->workSessions()->whereNotNull('actual_start_at')->firstOrFail();
+        $this->assertSame($shift->id, $attendance->shift_id);
 
         Carbon::setTestNow();
     }

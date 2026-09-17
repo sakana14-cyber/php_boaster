@@ -101,6 +101,9 @@ class WorkSessionTest extends TestCase
         $shift = $user->workSessions()->create([
             'scheduled_start_at' => Carbon::parse('2026-09-20 09:00:00'),
             'scheduled_end_at' => Carbon::parse('2026-09-20 12:00:00'),
+        ]);
+        $user->workSessions()->create([
+            'shift_id' => $shift->id,
             'actual_start_at' => Carbon::parse('2026-09-20 09:00:00'),
             'actual_end_at' => Carbon::parse('2026-09-20 09:05:00'),
             'earned_amount' => 100,
@@ -112,7 +115,7 @@ class WorkSessionTest extends TestCase
             ->assertJsonPath('work_session.scheduled_start_at', $shift->scheduled_start_at->toIso8601String())
             ->assertJsonPath('work_session.scheduled_end_at', $shift->scheduled_end_at->toIso8601String());
 
-        $newSession = $user->workSessions()->whereNull('actual_end_at')->firstOrFail();
+        $newSession = $user->workSessions()->whereNotNull('actual_start_at')->whereNull('actual_end_at')->firstOrFail();
         $this->assertSame($shift->id, $newSession->shift_id);
         $this->assertNull($newSession->scheduled_start_at);
 
@@ -124,9 +127,12 @@ class WorkSessionTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-09-20 15:00:00'));
 
         $user = User::factory()->create();
-        $user->workSessions()->create([
+        $shift = $user->workSessions()->create([
             'scheduled_start_at' => Carbon::parse('2026-09-20 09:00:00'),
             'scheduled_end_at' => Carbon::parse('2026-09-20 12:00:00'),
+        ]);
+        $user->workSessions()->create([
+            'shift_id' => $shift->id,
             'actual_start_at' => Carbon::parse('2026-09-20 09:00:00'),
             'actual_end_at' => Carbon::parse('2026-09-20 09:05:00'),
             'earned_amount' => 100,
@@ -138,7 +144,7 @@ class WorkSessionTest extends TestCase
             ->assertJsonPath('work_session.scheduled_start_at', null)
             ->assertJsonPath('work_session.scheduled_end_at', null);
 
-        $newSession = $user->workSessions()->whereNull('actual_end_at')->firstOrFail();
+        $newSession = $user->workSessions()->whereNotNull('actual_start_at')->whereNull('actual_end_at')->firstOrFail();
         $this->assertNull($newSession->shift_id);
 
         Carbon::setTestNow();
