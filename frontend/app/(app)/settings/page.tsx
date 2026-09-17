@@ -138,7 +138,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="p-4 bg-white shadow rounded-lg">
-                    <h2 className="text-lg font-medium text-gray-900">時給・丸め設定</h2>
+                    <h2 className="text-lg font-medium text-gray-900">時給</h2>
                     <p className="mt-1 text-sm text-gray-600">
                         変更後の設定は今後の勤務にのみ適用され、確定済みの過去の給与には影響しません。
                     </p>
