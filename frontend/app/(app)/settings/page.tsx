@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import type { SpecialWage, User } from "@/lib/types";
@@ -225,9 +226,10 @@ export default function SettingsPage() {
                                 </div>
                                 <button
                                     onClick={() => handleDeleteSpecialWage(wage.id)}
-                                    className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-xs font-semibold uppercase tracking-widest rounded-md"
+                                    aria-label="削除"
+                                    className="text-[#898989]"
                                 >
-                                    削除
+                                    <Trash2 size={20} strokeWidth={1.5} />
                                 </button>
                             </li>
                         ))}
