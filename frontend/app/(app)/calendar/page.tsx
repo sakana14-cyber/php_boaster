@@ -52,6 +52,7 @@ export default function CalendarPage() {
     const [manualForm, setManualForm] = useState({ start: "09:00", end: "17:00" });
     const [errors, setErrors] = useState<Record<string, string[]>>({});
     const [editingSession, setEditingSession] = useState<WorkSession | null>(null);
+    const [deletingSessionId, setDeletingSessionId] = useState<number | null>(null);
     const [editForm, setEditForm] = useState({ start: "", end: "" });
     const [editErrors, setEditErrors] = useState<Record<string, string[]>>({});
 
@@ -129,11 +130,16 @@ export default function CalendarPage() {
     }
 
     async function handleDeleteSession(id: number) {
-        if (!confirm("この記録を削除しますか?")) {
-            return;
-        }
         await apiFetch(`/api/work-sessions/${id}`, { method: "DELETE" });
         await refreshAll();
+    }
+
+    async function confirmDeleteSession() {
+        if (deletingSessionId === null) {
+            return;
+        }
+        await handleDeleteSession(deletingSessionId);
+        setDeletingSessionId(null);
     }
 
     function openEdit(session: WorkSession) {
@@ -365,7 +371,7 @@ export default function CalendarPage() {
                                                 </button>
                                             )}
                                             <button
-                                                onClick={() => handleDeleteSession(session.id)}
+                                                onClick={() => setDeletingSessionId(session.id)}
                                                 aria-label="削除"
                                                 className="text-[#898989]"
                                             >
@@ -520,6 +526,29 @@ export default function CalendarPage() {
                             </button>
                             <button
                                 onClick={() => setEditingSession(null)}
+                                className="flex-1 bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg py-3"
+                            >
+                                キャンセル
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {deletingSessionId !== null && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                    <div className="w-full max-w-sm space-y-4 rounded-lg bg-white p-4 shadow-lg">
+                        <p className="text-sm font-medium text-gray-700">この記録を削除しますか?</p>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={confirmDeleteSession}
+                                className="flex-1 bg-[#FF7F50] text-white text-sm font-semibold rounded-lg py-3"
+                            >
+                                削除する
+                            </button>
+                            <button
+                                onClick={() => setDeletingSessionId(null)}
                                 className="flex-1 bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg py-3"
                             >
                                 キャンセル
