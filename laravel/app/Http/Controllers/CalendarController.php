@@ -23,6 +23,7 @@ class CalendarController extends Controller
         $monthEnd = $month->copy()->endOfMonth()->endOfDay();
 
         $sessions = $request->user()->workSessions()
+            ->with('shift')
             ->whereBetween('actual_start_at', [$monthStart, $monthEnd])
             ->whereNotNull('actual_start_at')
             ->orderBy('actual_start_at')
@@ -68,6 +69,7 @@ class CalendarController extends Controller
         $day = Carbon::createFromFormat('Y-m-d', $date)->startOfDay();
 
         $sessions = $request->user()->workSessions()
+            ->with('shift')
             ->where(function ($query) use ($day) {
                 $query->whereBetween('actual_start_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
                     ->orWhere(function ($query) use ($day) {

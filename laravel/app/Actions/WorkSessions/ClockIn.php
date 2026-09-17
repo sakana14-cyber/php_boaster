@@ -40,8 +40,21 @@ class ClockIn
                 return $todaysShift;
             }
 
+            // 2回目以降の出勤。現在時刻が予定時間内に重なる予定(シフト)があれば、
+            // その予定を shift_id で参照させ、実績側で予定時刻を引き継げるようにする。
+            $overlappingShift = $user->workSessions()
+                ->whereNull('shift_id')
+                ->whereNotNull('scheduled_start_at')
+                ->whereNotNull('scheduled_end_at')
+                ->where('scheduled_start_at', '<=', now())
+                ->where('scheduled_end_at', '>', now())
+                ->orderBy('scheduled_start_at')
+                ->lockForUpdate()
+                ->first();
+
             return $user->workSessions()->create([
                 'actual_start_at' => now(),
+                'shift_id' => $overlappingShift?->id,
             ]);
         });
     }
