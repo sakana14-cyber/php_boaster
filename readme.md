@@ -120,7 +120,7 @@ frontend/                        # Next.js（SPA）
 | `email` | string | ログイン用メールアドレス |
 | `password` | string | ハッシュ化済みパスワード |
 | `hourly_wage_default` | unsigned integer | 基本時給（円） |
-| `hourly_wage_weekend_holiday` | unsigned integer | 土日祝時給（円）。曜日から自動判定して適用する |
+| `hourly_wage_weekend_holiday` | nullable unsigned integer | 土日祝時給（円）。曜日から自動判定して適用する。未設定（`NULL`）の場合は土日祝も `hourly_wage_default` を適用する |
 | `rounding_unit_shift` | unsigned integer | 勤務中の端数切り捨て単位（分） |
 | `rounding_unit_edge` | unsigned integer | 出退勤打刻前後の端数切り捨て単位（分） |
 | `created_at` / `updated_at` | timestamp | 作成・更新日時 |
@@ -145,14 +145,17 @@ frontend/                        # Next.js（SPA）
 |---|---|---|
 | `id` | bigint | 主キー |
 | `user_id` | foreign key | 勤務したユーザー |
-| `scheduled_start_at` | nullable datetime | 予定出勤日時（カレンダーで事前入力するシフト） |
-| `scheduled_end_at` | nullable datetime | 予定退勤日時 |
-| `actual_start_at` | nullable datetime | 実際の出勤日時（打刻）。`NULL` は未出勤 |
+| `shift_id` | nullable foreign key（自己参照） | 紐づく予定（シフト）行の `id`。`NULL` の行が「予定」自身、値を持つ行がその予定に対する「出勤実績」を表す |
+| `scheduled_start_at` | nullable datetime | 予定出勤日時（カレンダーで事前入力するシフト）。予定行のみが保持し、実績行は `NULL`（表示時は `shift` リレーション経由で予定行から解決する） |
+| `scheduled_end_at` | nullable datetime | 予定退勤日時。同上 |
+| `actual_start_at` | nullable datetime | 実際の出勤日時（打刻）。`NULL` は未出勤（予定行は常に `NULL`） |
 | `actual_end_at` | nullable datetime | 実際の退勤日時（打刻）。`NULL` は勤務中または未実施 |
 | `earned_amount` | nullable unsigned integer | このセッションで確定した給与（円） |
 | `created_at` / `updated_at` | timestamp | 作成・更新日時 |
 
 過去の給与を変えないため、給与計算は打刻時点の `users`／`special_wages` の設定値で行い、退勤時に `earned_amount` として確定・保存します。ユーザーが後から時給や特別給を変更しても、確定済みの `earned_amount` は再計算しません。
+
+1つの予定（シフト）に対して同じ日に複数回出退勤しても、予定行自体には実績を書き込まず、出勤のたびに新しい実績行を作成して `shift_id` で予定に紐付けます。これにより「予定は常に1行、出勤実績は複数行」の関係を保ち、予定の時刻を後から編集しても紐づく全ての実績行に反映されます。
 
 ## 業務ルール
 
@@ -253,13 +256,15 @@ Laravel の認証（Sanctum）、認可、CSRF 保護、Form Request、Eloquent 
 
 ### カレンダー・日付詳細
 
-- カレンダーには日ごとの合計給与を表示する
-- 日付を選ぶと、出勤時刻、退勤時刻、勤務時間、適用時給、給与を表示する
-- 同日に複数の勤務がある場合は明細を分けて表示する
+- カレンダー本体には金額を表示せず、予定または実績がある日にドット表示、実績がある日にハイライト背景で示す
+- 日付を選ぶと、その日の予定・出勤実績を行ごとに分けて表示する（開始・終了時刻、金額、予定/出勤バッジ）
+- 同日に複数の勤務がある場合も明細を分けて表示する
+- 明細から予定・実績の追加・編集・削除ができる（ページ遷移せずポップアップで完結する）
 
 ### 設定
 
-- 現在の時給を確認・変更できる
+- 現在の時給を確認・変更できる（通常はグレーアウト表示のみ、「編集」ボタンを押した時だけ入力可能にする）
+- 土日祝時給は空欄（未設定）にでき、その場合は基本給を適用する
 - 0 円以下、小数、整数以外は登録できない
 - 時給変更が過去の確定給与へ影響しないことを明示する
 
