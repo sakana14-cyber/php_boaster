@@ -3,7 +3,7 @@
 アルバイト・パートで働くユーザーが、出勤と退勤を記録し、勤務中の予測給与や日別・月別の給与を確認できる Web アプリケーションです。
 
 > **開発状況**  
-> 現在は Laravel の初期セットアップ段階です。この README は、本アプリを実装する際の要件・設計方針・開発手順をまとめたものです。
+> Laravel（API）と Next.js（SPA）による基本機能（認証、出退勤、給与計算、カレンダー、設定）は実装済みです。この README は、本アプリの要件・設計方針・開発手順をまとめたものです。詳細な進捗は[実装ロードマップ](#実装ロードマップ)を参照してください。
 
 ## 目次
 
@@ -50,58 +50,64 @@
 
 ## 技術構成
 
-PHP と Laravel をアプリケーションの中核として使用します。
+バックエンド(Laravel)を JSON API、フロントエンド(Next.js)を SPA として分離した構成です。
 
 | 分類 | 技術 | 用途 |
 |---|---|---|
 | バックエンド | PHP 8.3 以上 | アプリケーションロジック |
 | フレームワーク | Laravel 13 | ルーティング、認証、検証、ORM、テスト |
-| UI | Blade | サーバーサイドレンダリング |
-| CSS | Tailwind CSS 4 | モバイルファーストの画面設計 |
-| JavaScript | Vanilla JavaScript | 勤務中タイマーなど必要最小限の動的表示 |
-| ビルド | Vite 8 | CSS・JavaScript の開発とビルド |
+| API 認証 | Laravel Sanctum | Cookie ベースの SPA 向け認証、CSRF 保護 |
 | データベース | SQLite（開発時） | ユーザー、時給、勤務記録の保存 |
-| テスト | PHPUnit 12 | 単体・機能テスト |
+| バックエンドテスト | PHPUnit 12 | 単体・機能テスト |
+| フロントエンド | Next.js 16（App Router） | ルーティング、画面表示 |
+| UI ライブラリ | React 19 / TypeScript | コンポーネント実装 |
+| CSS | Tailwind CSS 4 | モバイルファーストの画面設計 |
 
-アプリケーション本体は [`laravel/`](laravel) に配置されています。初期段階では単一の Laravel アプリとして構成し、別のフロントエンド SPA や API サーバーへ不用意に分割しません。
+バックエンドは [`laravel/`](laravel)、フロントエンドは [`frontend/`](frontend) に、それぞれ独立したプロジェクトとして配置しています。当初は単一の Laravel アプリ（Blade）として実装していましたが、UI をより柔軟に作り込むため、Laravel を API 専用に切り替え、フロントエンドを Next.js の別プロジェクトへ分離しました。
 
 ## システム設計
 
 ### 責務の分担
 
-- Laravel は認証、入力検証、勤務状態の管理、確定給与の計算、DB 更新を担当する
-- Blade は Laravel が返した状態を安全に表示する
-- JavaScript は、サーバーから受け取った出勤日時と適用時給を使って予測表示だけを更新する
+- Laravel（`laravel/`）は認証（Sanctum）、入力検証、勤務状態の管理、確定給与の計算、DB 更新を担当し、JSON のみを返す
+- Next.js（`frontend/`）は Laravel の API から取得した状態を画面へ描画する
+- クライアント側（TypeScript）は、サーバーから受け取った出勤日時と適用時給を使って予測表示だけを更新する
 - 予測給与の更新を目的として毎秒 API や DB へアクセスしない
 - 退勤時の確定値はブラウザの計算結果を信用せず、Laravel 側で再計算する
+- CORS は `frontend/` のオリジンのみを許可し、Cookie 送信には `credentials: 'include'` を用いる
 
 ### 推奨ディレクトリ構成
 
-実装時は Laravel の標準構成を保ち、役割を次のように分離します。
-
 ```text
-laravel/
+laravel/                         # Laravel（API）
 ├── app/
 │   ├── Actions/WorkSessions/    # 出勤・退勤などのユースケース
 │   ├── Http/Controllers/        # HTTP リクエストの受付
 │   ├── Http/Requests/           # 入力バリデーション
+│   ├── Http/Resources/          # JSON レスポンスの整形
 │   ├── Models/                  # User、WorkSession など
 │   └── Services/                # 給与計算・集計処理
 ├── database/
 │   ├── factories/
 │   ├── migrations/
 │   └── seeders/
-├── resources/
-│   ├── css/
-│   ├── js/
-│   └── views/
-├── routes/web.php
+├── routes/api.php
 └── tests/
-    ├── Feature/
-    └── Unit/
+    └── Feature/
+
+frontend/                        # Next.js（SPA）
+├── app/
+│   ├── login/, register/        # 未認証時の画面
+│   └── (app)/                   # 認証必須画面（下部タブナビゲーション）
+│       ├── home/
+│       ├── calendar/                # 日付はページ内 state で管理（ページ遷移なし）
+│       ├── settings/
+│       └── work-sessions/[id]/edit/
+├── context/AuthContext.tsx      # ログイン状態の管理
+└── lib/                         # API クライアント・型定義・給与計算ロジック
 ```
 
-過度な抽象化は避けますが、給与計算を Controller や JavaScript に重複して記述しないため、サーバー側の計算処理は専用クラスへ集約します。
+過度な抽象化は避けますが、給与計算を Controller やフロントエンドに重複して記述しないため、サーバー側の計算処理は専用クラス（`SalaryCalculator`）へ集約します。
 
 ### データモデル
 
@@ -114,7 +120,7 @@ laravel/
 | `email` | string | ログイン用メールアドレス |
 | `password` | string | ハッシュ化済みパスワード |
 | `hourly_wage_default` | unsigned integer | 基本時給（円） |
-| `hourly_wage_weekend_holiday` | unsigned integer | 土日祝時給（円）。曜日から自動判定して適用する |
+| `hourly_wage_weekend_holiday` | nullable unsigned integer | 土日祝時給（円）。曜日から自動判定して適用する。未設定（`NULL`）の場合は土日祝も `hourly_wage_default` を適用する |
 | `rounding_unit_shift` | unsigned integer | 勤務中の端数切り捨て単位（分） |
 | `rounding_unit_edge` | unsigned integer | 出退勤打刻前後の端数切り捨て単位（分） |
 | `created_at` / `updated_at` | timestamp | 作成・更新日時 |
@@ -139,14 +145,17 @@ laravel/
 |---|---|---|
 | `id` | bigint | 主キー |
 | `user_id` | foreign key | 勤務したユーザー |
-| `scheduled_start_at` | nullable datetime | 予定出勤日時（カレンダーで事前入力するシフト） |
-| `scheduled_end_at` | nullable datetime | 予定退勤日時 |
-| `actual_start_at` | nullable datetime | 実際の出勤日時（打刻）。`NULL` は未出勤 |
+| `shift_id` | nullable foreign key（自己参照） | 紐づく予定（シフト）行の `id`。`NULL` の行が「予定」自身、値を持つ行がその予定に対する「出勤実績」を表す |
+| `scheduled_start_at` | nullable datetime | 予定出勤日時（カレンダーで事前入力するシフト）。予定行のみが保持し、実績行は `NULL`（表示時は `shift` リレーション経由で予定行から解決する） |
+| `scheduled_end_at` | nullable datetime | 予定退勤日時。同上 |
+| `actual_start_at` | nullable datetime | 実際の出勤日時（打刻）。`NULL` は未出勤（予定行は常に `NULL`） |
 | `actual_end_at` | nullable datetime | 実際の退勤日時（打刻）。`NULL` は勤務中または未実施 |
 | `earned_amount` | nullable unsigned integer | このセッションで確定した給与（円） |
 | `created_at` / `updated_at` | timestamp | 作成・更新日時 |
 
 過去の給与を変えないため、給与計算は打刻時点の `users`／`special_wages` の設定値で行い、退勤時に `earned_amount` として確定・保存します。ユーザーが後から時給や特別給を変更しても、確定済みの `earned_amount` は再計算しません。
+
+1つの予定（シフト）に対して同じ日に複数回出退勤しても、予定行自体には実績を書き込まず、出勤のたびに新しい実績行を作成して `shift_id` で予定に紐付けます。これにより「予定は常に1行、出勤実績は複数行」の関係を保ち、予定の時刻を後から編集しても紐づく全ての実績行に反映されます。
 
 ## 業務ルール
 
@@ -214,7 +223,7 @@ floor(1200 × 5400 ÷ 3600) = 1,800 円
 - フロントエンドが送信した給与や勤務秒数をそのまま保存する
 - バリデーションなしで入力値を利用する
 
-Laravel の認証、認可、CSRF 保護、Form Request、Eloquent のバインディングを利用し、SQL インジェクション、XSS、CSRF など一般的な脆弱性を防ぎます。
+Laravel の認証（Sanctum）、認可、CSRF 保護、Form Request、Eloquent のバインディングを利用し、SQL インジェクション、XSS、CSRF など一般的な脆弱性を防ぎます。CORS は許可オリジンを `frontend/` のみに限定します。
 
 ## 画面構成
 
@@ -247,13 +256,15 @@ Laravel の認証、認可、CSRF 保護、Form Request、Eloquent のバイン�
 
 ### カレンダー・日付詳細
 
-- カレンダーには日ごとの合計給与を表示する
-- 日付を選ぶと、出勤時刻、退勤時刻、勤務時間、適用時給、給与を表示する
-- 同日に複数の勤務がある場合は明細を分けて表示する
+- カレンダー本体には金額を表示せず、予定または実績がある日にドット表示、実績がある日にハイライト背景で示す
+- 日付を選ぶと、その日の予定・出勤実績を行ごとに分けて表示する（開始・終了時刻、金額、予定/出勤バッジ）
+- 同日に複数の勤務がある場合も明細を分けて表示する
+- 明細から予定・実績の追加・編集・削除ができる（ページ遷移せずポップアップで完結する）
 
 ### 設定
 
-- 現在の時給を確認・変更できる
+- 現在の時給を確認・変更できる（通常はグレーアウト表示のみ、「編集」ボタンを押した時だけ入力可能にする）
+- 土日祝時給は空欄（未設定）にでき、その場合は基本給を適用する
 - 0 円以下、小数、整数以外は登録できない
 - 時給変更が過去の確定給与へ影響しないことを明示する
 
@@ -274,18 +285,7 @@ Laravel の認証、認可、CSRF 保護、Form Request、Eloquent のバイン�
 - Node.js / npm
 - PHP SQLite 拡張（`pdo_sqlite`）
 
-### インストール
-
-```bash
-git clone <repository-url>
-cd php_boaster/laravel
-touch database/database.sqlite
-composer run setup
-```
-
-`composer run setup` は依存関係のインストール、`.env` の作成、アプリケーションキー生成、マイグレーション、フロントエンドのビルドを実行します。
-
-個別に実行する場合：
+### バックエンド（Laravel API）
 
 ```bash
 cd laravel
@@ -294,33 +294,53 @@ cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
-npm install
-npm run build
 ```
+
+`.env` の `SANCTUM_STATEFUL_DOMAINS` / `FRONTEND_URLS` は、フロントエンドのオリジン（デフォルト `localhost:3000`）と一致させてください。
+
+### フロントエンド（Next.js）
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+```
+
+`.env.local` の `NEXT_PUBLIC_API_URL` は Laravel API の URL（デフォルト `http://localhost:8000`）。
 
 ### 開発サーバー
 
+バックエンド・フロントエンドをそれぞれ別ターミナルで起動します。
+
 ```bash
+# ターミナル1: Laravel API（http://localhost:8000）
 cd laravel
-composer run dev
+php artisan serve
+
+# ターミナル2: Next.js（http://localhost:3000）
+cd frontend
+npm run dev
 ```
 
-起動後、原則として `http://localhost:8000` を開きます。終了する場合は `Ctrl+C` を押してください。
+ブラウザは `http://localhost:3000` を開いてください（`127.0.0.1` ではなく `localhost` を使うこと。CORS / Sanctum の stateful domain 設定が `localhost` を前提にしているため）。
 
 ### よく使うコマンド
 
 ```bash
-# テスト
-composer test
+# Laravel: テスト
+cd laravel && composer test
 
-# PHP のコード整形
-./vendor/bin/pint
+# Laravel: コード整形
+cd laravel && ./vendor/bin/pint
 
-# DB を作り直してシードを投入（既存の開発データは消える）
-php artisan migrate:fresh --seed
+# Laravel: DB を作り直す（既存の開発データは消える）
+cd laravel && php artisan migrate:fresh
 
-# 本番用アセットの生成
-npm run build
+# Next.js: 型チェック・Lint
+cd frontend && npm run lint
+
+# Next.js: 本番ビルド
+cd frontend && npm run build
 ```
 
 ## テスト方針
@@ -344,14 +364,16 @@ npm run build
 ## 実装ロードマップ
 
 - [x] Laravel 13 プロジェクトの作成
-- [ ] 認証機能の実装
-- [ ] 時給設定とバリデーション
-- [ ] 勤務記録テーブルとモデルの作成
-- [ ] 出勤・退勤処理と多重実行対策
-- [ ] 給与計算サービスと Unit テスト
-- [ ] ホーム画面とリアルタイム予測表示
-- [ ] 日別履歴と編集・削除
-- [ ] カレンダーと月間集計
+- [x] 勤務記録テーブルとモデルの作成
+- [x] 給与計算サービスと Unit テスト
+- [x] 認証機能の実装（Sanctum）
+- [x] 出勤・退勤処理と多重実行対策
+- [x] 時給設定とバリデーション
+- [x] 日別履歴と編集・削除
+- [x] カレンダーと月間集計
+- [x] Laravel を API 専用へ切り替え、Next.js フロントエンドを追加
+- [x] ホーム画面とリアルタイム予測表示（Next.js）
+- [ ] パスワードリセット・メール確認画面
 - [ ] レスポンシブ対応とアクセシビリティ確認
 - [ ] Feature テストの拡充
 

@@ -29,11 +29,11 @@ class CalendarTest extends TestCase
             'earned_amount' => 2000,
         ]);
 
-        $response = $this->actingAs($user)->get(route('calendar.index', ['year' => 2026, 'month' => 9]));
+        $response = $this->actingAs($user)->getJson('/api/calendar?year=2026&month=9');
 
         $response->assertOk();
-        $response->assertViewHas('monthlyEarnedAmount', 1000);
-        $response->assertViewHas('monthlyWorkedDays', 1);
+        $response->assertJsonPath('monthly_earned_amount', 1000);
+        $response->assertJsonPath('monthly_worked_days', 1);
     }
 
     public function test_calendar_sums_multiple_sessions_on_the_same_day(): void
@@ -53,10 +53,28 @@ class CalendarTest extends TestCase
             'earned_amount' => 1500,
         ]);
 
-        $response = $this->actingAs($user)->get(route('calendar.index', ['year' => 2026, 'month' => 9]));
+        $response = $this->actingAs($user)->getJson('/api/calendar?year=2026&month=9');
 
-        $response->assertViewHas('monthlyEarnedAmount', 2500);
-        $response->assertViewHas('monthlyWorkedDays', 1);
+        $response->assertJsonPath('monthly_earned_amount', 2500);
+        $response->assertJsonPath('monthly_worked_days', 1);
+    }
+
+    public function test_shift_day_stays_marked_after_clocking_in(): void
+    {
+        $user = User::factory()->create();
+        $scheduledStart = Carbon::create(2026, 9, 10, 9, 0);
+        $scheduledEnd = Carbon::create(2026, 9, 10, 17, 0);
+
+        $user->workSessions()->create([
+            'scheduled_start_at' => $scheduledStart,
+            'scheduled_end_at' => $scheduledEnd,
+            'actual_start_at' => $scheduledStart,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/calendar?year=2026&month=9');
+
+        $response->assertOk();
+        $response->assertJsonFragment(['shift_days' => ['2026-09-10']]);
     }
 
     public function test_calendar_day_detail_shows_only_that_users_sessions(): void
@@ -76,11 +94,10 @@ class CalendarTest extends TestCase
             'earned_amount' => 999,
         ]);
 
-        $response = $this->actingAs($owner)->get(route('calendar.show', '2026-09-10'));
+        $response = $this->actingAs($owner)->getJson('/api/calendar/2026-09-10');
 
         $response->assertOk();
-        $sessions = $response->viewData('sessions');
-        $this->assertCount(1, $sessions);
-        $this->assertSame(1000, $sessions->first()->earned_amount);
+        $response->assertJsonCount(1, 'sessions');
+        $response->assertJsonPath('sessions.0.earned_amount', 1000);
     }
 }
