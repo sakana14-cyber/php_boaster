@@ -312,16 +312,18 @@ export default function CalendarPage() {
                         <p className="text-sm text-gray-500 bg-gray-100 rounded-md px-3 py-2">{selectedDateLabel}</p>
 
                         {dayDetail?.sessions.map((session) => {
-                            const scheduledOnly = isScheduledOnly(session);
                             const badgeLabel = sessionBadgeLabel(session, now);
                             const isScheduledBadge = badgeLabel === "予定";
-                            const startTime = formatTime(session.actual_start_at ?? session.scheduled_start_at);
-                            const endTime = formatTime(session.actual_end_at ?? session.scheduled_end_at);
+                            const startTime = formatTime(
+                                isScheduledBadge ? session.scheduled_start_at : session.actual_start_at,
+                            );
+                            const endTime = formatTime(
+                                isScheduledBadge ? session.scheduled_end_at : session.actual_end_at,
+                            );
 
-                            let amount: number | null = session.earned_amount;
+                            let amount: number | null = isScheduledBadge ? null : session.earned_amount;
                             if (
-                                amount === null &&
-                                scheduledOnly &&
+                                isScheduledBadge &&
                                 user &&
                                 session.scheduled_start_at &&
                                 session.scheduled_end_at
