@@ -248,7 +248,7 @@ export default function DashboardPage() {
                     </svg>
                 ) : (
                     <svg viewBox="0 0 380 380" className="absolute inset-0">
-                        <circle cx="190" cy="190" r={RING_RADIUS} fill="none" stroke="#D9D9D9" strokeWidth="20" />
+                        <circle cx="190" cy="190" r={RING_RADIUS} fill="none" stroke="#ECECEC" strokeWidth="20" />
                     </svg>
                 )}
 
