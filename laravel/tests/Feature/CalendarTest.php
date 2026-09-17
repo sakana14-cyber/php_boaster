@@ -59,6 +59,24 @@ class CalendarTest extends TestCase
         $response->assertJsonPath('monthly_worked_days', 1);
     }
 
+    public function test_shift_day_stays_marked_after_clocking_in(): void
+    {
+        $user = User::factory()->create();
+        $scheduledStart = Carbon::create(2026, 9, 10, 9, 0);
+        $scheduledEnd = Carbon::create(2026, 9, 10, 17, 0);
+
+        $user->workSessions()->create([
+            'scheduled_start_at' => $scheduledStart,
+            'scheduled_end_at' => $scheduledEnd,
+            'actual_start_at' => $scheduledStart,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/calendar?year=2026&month=9');
+
+        $response->assertOk();
+        $response->assertJsonFragment(['shift_days' => ['2026-09-10']]);
+    }
+
     public function test_calendar_day_detail_shows_only_that_users_sessions(): void
     {
         $owner = User::factory()->create();

@@ -39,11 +39,13 @@ class CalendarController extends Controller
             ),
         ])->all();
 
-        $shiftDays = $request->user()->workSessions()
-            ->whereNull('actual_start_at')
+        $scheduledDays = $request->user()->workSessions()
+            ->whereNotNull('scheduled_start_at')
             ->whereBetween('scheduled_start_at', [$monthStart, $monthEnd])
             ->pluck('scheduled_start_at')
-            ->map(fn ($datetime) => $datetime->toDateString())
+            ->map(fn ($datetime) => $datetime->toDateString());
+
+        $shiftDays = $scheduledDays->merge($sessionsByDate->keys())
             ->unique()
             ->values();
 
