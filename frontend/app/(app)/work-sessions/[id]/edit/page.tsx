@@ -55,7 +55,7 @@ export default function WorkSessionEditPage({ params }: PageProps<"/work-session
     }
 
     return (
-        <div className="py-8">
+        <div className="min-h-screen py-8">
             <header className="bg-white shadow px-4 py-4">
                 <h2 className="font-semibold text-xl text-gray-800">勤務記録の編集</h2>
             </header>
