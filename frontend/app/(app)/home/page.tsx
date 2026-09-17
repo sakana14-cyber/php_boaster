@@ -257,7 +257,20 @@ export default function DashboardPage() {
                     </svg>
                 ) : (
                     <svg viewBox="0 0 380 380" className="absolute inset-0">
-                        <circle cx="190" cy="190" r={RING_RADIUS} fill="none" stroke="#ECECEC" strokeWidth="20" />
+                        <defs>
+                            <linearGradient id="ring-gradient-gray" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#D9D9D9" />
+                                <stop offset="100%" stopColor="#F2F2F2" />
+                            </linearGradient>
+                        </defs>
+                        <circle
+                            cx="190"
+                            cy="190"
+                            r={RING_RADIUS}
+                            fill="none"
+                            stroke="url(#ring-gradient-gray)"
+                            strokeWidth="20"
+                        />
                     </svg>
                 )}
 
