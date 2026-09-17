@@ -99,7 +99,7 @@ frontend/                        # Next.js（SPA）
 ├── app/
 │   ├── login/, register/        # 未認証時の画面
 │   └── (app)/                   # 認証必須画面（下部タブナビゲーション）
-│       ├── dashboard/
+│       ├── home/
 │       ├── calendar/                # 日付はページ内 state で管理（ページ遷移なし）
 │       ├── settings/
 │       └── work-sessions/[id]/edit/

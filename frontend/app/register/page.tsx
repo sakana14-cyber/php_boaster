@@ -34,7 +34,7 @@ export default function RegisterPage() {
                 },
             });
             setUser(data.user);
-            router.push("/dashboard");
+            router.push("/home");
         } catch (error) {
             if (error instanceof ApiError && error.errors) {
                 setErrors(error.errors);
