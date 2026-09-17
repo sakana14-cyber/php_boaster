@@ -188,15 +188,24 @@ export default function DashboardPage() {
     const amountText = activeSession ? predicted : 0;
     const timeText = activeSession ? formatElapsedTime(elapsedSeconds) : "00:00:00";
 
-    const statusText = activeSession
-        ? isWithinShift(activeSession, now)
-            ? `出勤中 ${formatShiftRange(activeSession)}`
-            : "出勤中"
-        : data.todays_shift
-          ? isWithinShift(data.todays_shift, now)
-              ? `出勤時刻です ${formatShiftRange(data.todays_shift)}`
-              : `次の出勤 ${formatShiftRange(data.todays_shift)}`
-          : null;
+    const statusText = (() => {
+        if (activeSession) {
+            return isWithinShift(activeSession, now) ? `出勤中 ${formatShiftRange(activeSession)}` : "出勤中";
+        }
+
+        const shift = data.todays_shift;
+        if (!shift?.scheduled_start_at) {
+            return null;
+        }
+
+        if (now < new Date(shift.scheduled_start_at)) {
+            return `次の出勤 ${formatShiftRange(shift)}`;
+        }
+        if (isWithinShift(shift, now)) {
+            return `出勤時刻です ${formatShiftRange(shift)}`;
+        }
+        return null;
+    })();
 
     const showProgressRing = Boolean(activeSession) && isWithinShift(activeSession, now);
 
