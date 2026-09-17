@@ -234,19 +234,19 @@ export default function CalendarPage() {
 
                     <div className="grid grid-cols-3 gap-4 mb-6 text-center">
                         <div>
-                            <p className="text-sm text-gray-500">月間給与</p>
+                            <p className="text-sm text-gray-500">給与</p>
                             <p className="text-xl font-bold text-gray-900">
                                 {data.monthly_earned_amount.toLocaleString("ja-JP")}円
                             </p>
                         </div>
                         <div>
-                            <p className="text-sm text-gray-500">月間勤務時間</p>
+                            <p className="text-sm text-gray-500">勤務時間</p>
                             <p className="text-xl font-bold text-gray-900">
                                 {workedHours}時間{workedMinutes}分
                             </p>
                         </div>
                         <div>
-                            <p className="text-sm text-gray-500">月間勤務日数</p>
+                            <p className="text-sm text-gray-500">勤務日数</p>
                             <p className="text-xl font-bold text-gray-900">{data.monthly_worked_days}日</p>
                         </div>
                     </div>
