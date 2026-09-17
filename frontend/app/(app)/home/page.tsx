@@ -11,12 +11,33 @@ const RING_RADIUS = 170;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const FALLBACK_SHIFT_SECONDS = 8 * 60 * 60;
 
+function isWithinShift(
+    shift: Pick<WorkSession, "scheduled_start_at" | "scheduled_end_at"> | null,
+    now: Date,
+): boolean {
+    if (!shift?.scheduled_start_at || !shift?.scheduled_end_at) {
+        return false;
+    }
+    const start = new Date(shift.scheduled_start_at);
+    const end = new Date(shift.scheduled_end_at);
+    return now >= start && now < end;
+}
+
+function formatShiftRange(shift: Pick<WorkSession, "scheduled_start_at" | "scheduled_end_at">): string {
+    const start = new Date(shift.scheduled_start_at!);
+    const end = new Date(shift.scheduled_end_at!);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dateLabel = `${start.getMonth() + 1}/${start.getDate()}`;
+    return `${dateLabel} ${pad(start.getHours())}:${pad(start.getMinutes())} ~ ${pad(end.getHours())}:${pad(end.getMinutes())}`;
+}
+
 export default function DashboardPage() {
     const { user } = useAuth();
     const [data, setData] = useState<DashboardData | null>(null);
     const [specialWages, setSpecialWages] = useState<SpecialWage[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [now, setNow] = useState(new Date());
 
     const [isPaused, setIsPaused] = useState(false);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -38,6 +59,12 @@ export default function DashboardPage() {
             setSpecialWages(res.special_wages),
         );
     }, [loadDashboard]);
+
+    // 出勤予定時刻に応じたステータス表示を切り替えるための時刻更新
+    useEffect(() => {
+        const id = setInterval(() => setNow(new Date()), 30_000);
+        return () => clearInterval(id);
+    }, []);
 
     const activeSession = data?.active_session ?? null;
 
@@ -161,12 +188,25 @@ export default function DashboardPage() {
     const amountText = activeSession ? predicted : 0;
     const timeText = activeSession ? formatElapsedTime(elapsedSeconds) : "00:00:00";
 
+    const statusText = activeSession
+        ? isWithinShift(activeSession, now)
+            ? `出勤中 ${formatShiftRange(activeSession)}`
+            : "出勤中"
+        : data.todays_shift
+          ? isWithinShift(data.todays_shift, now)
+              ? `出勤時刻です ${formatShiftRange(data.todays_shift)}`
+              : `次の出勤 ${formatShiftRange(data.todays_shift)}`
+          : null;
+
     return (
-        <div className="min-h-screen bg-white py-12 flex flex-col items-center justify-center gap-6">
+        <div className="min-h-screen bg-white py-12 flex flex-col items-center gap-6">
+            <p className="text-sm text-[#898989] text-center px-4 min-h-5">{statusText}</p>
+
             {error && (
                 <div className="mx-4 bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">{error}</div>
             )}
 
+            <div className="flex-1 flex flex-col items-center justify-center gap-6">
             <div className="relative w-[380px] h-[380px] flex items-center justify-center">
                 {activeSession && (
                     <svg viewBox="0 0 380 380" className="absolute inset-0 -rotate-90">
@@ -246,6 +286,7 @@ export default function DashboardPage() {
                         </button>
                     </div>
                 )}
+            </div>
             </div>
         </div>
     );
