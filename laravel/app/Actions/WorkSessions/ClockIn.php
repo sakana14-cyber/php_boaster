@@ -12,6 +12,10 @@ class ClockIn
     /**
      * ユーザーを出勤させ、勤務中の WorkSession を作成する。
      *
+     * 予定(シフト)行自体には決して actual_* を書き込まず、出勤の度に
+     * 新しい実績行を作成して shift_id で予定に紐付ける。これにより
+     * 「予定は常に1行、出勤実績は複数行」という関係を保つ。
+     *
      * @throws RuntimeException 既に未退勤の勤務セッションがある場合
      */
     public function handle(User $user): WorkSession
@@ -27,22 +31,19 @@ class ClockIn
                 throw new RuntimeException('既に出勤中です。');
             }
 
-            $todaysShift = $user->workSessions()
-                ->whereNull('actual_start_at')
+            // 1. 今日の予定のうち、まだ一度も出勤実績がないものを優先して紐付ける
+            //   (予定時刻の前後にずれて出勤しても紐付く)
+            $shift = $user->workSessions()
+                ->whereNull('shift_id')
+                ->whereNotNull('scheduled_start_at')
                 ->whereDate('scheduled_start_at', today())
+                ->whereDoesntHave('attendances')
                 ->orderBy('scheduled_start_at')
                 ->lockForUpdate()
                 ->first();
 
-            if ($todaysShift) {
-                $todaysShift->update(['actual_start_at' => now()]);
-
-                return $todaysShift;
-            }
-
-            // 2回目以降の出勤。現在時刻が予定時間内に重なる予定(シフト)があれば、
-            // その予定を shift_id で参照させ、実績側で予定時刻を引き継げるようにする。
-            $overlappingShift = $user->workSessions()
+            // 2. なければ、現在時刻が予定時間内に重なる予定を探す(2回目以降の出勤)
+            $shift ??= $user->workSessions()
                 ->whereNull('shift_id')
                 ->whereNotNull('scheduled_start_at')
                 ->whereNotNull('scheduled_end_at')
@@ -54,7 +55,7 @@ class ClockIn
 
             return $user->workSessions()->create([
                 'actual_start_at' => now(),
-                'shift_id' => $overlappingShift?->id,
+                'shift_id' => $shift?->id,
             ]);
         });
     }

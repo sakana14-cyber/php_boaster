@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'user_id',
@@ -52,5 +53,15 @@ class WorkSession extends Model
     public function shift(): BelongsTo
     {
         return $this->belongsTo(WorkSession::class, 'shift_id');
+    }
+
+    /**
+     * この予定(シフト)に紐づく出勤実績。予定自身の行が親になる。
+     *
+     * @return HasMany<WorkSession, $this>
+     */
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(WorkSession::class, 'shift_id');
     }
 }

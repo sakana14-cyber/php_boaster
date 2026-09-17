@@ -33,16 +33,6 @@ function canEditSession(session: WorkSession): boolean {
     return isScheduledOnly(session) || session.actual_end_at !== null;
 }
 
-function sessionBadgeLabel(session: WorkSession, now: Date): "予定" | "出勤" {
-    if (!session.actual_start_at) {
-        return "予定";
-    }
-    if (session.scheduled_end_at && now < new Date(session.scheduled_end_at)) {
-        return "予定";
-    }
-    return "出勤";
-}
-
 export default function CalendarPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -312,18 +302,18 @@ export default function CalendarPage() {
                         <p className="text-sm text-gray-500 bg-gray-100 rounded-md px-3 py-2">{selectedDateLabel}</p>
 
                         {dayDetail?.sessions.map((session) => {
-                            const badgeLabel = sessionBadgeLabel(session, now);
-                            const isScheduledBadge = badgeLabel === "予定";
+                            const scheduledOnly = isScheduledOnly(session);
+                            const badgeLabel = scheduledOnly ? "予定" : "出勤";
                             const startTime = formatTime(
-                                isScheduledBadge ? session.scheduled_start_at : session.actual_start_at,
+                                scheduledOnly ? session.scheduled_start_at : session.actual_start_at,
                             );
                             const endTime = formatTime(
-                                isScheduledBadge ? session.scheduled_end_at : session.actual_end_at,
+                                scheduledOnly ? session.scheduled_end_at : session.actual_end_at,
                             );
 
-                            let amount: number | null = isScheduledBadge ? null : session.earned_amount;
+                            let amount: number | null = scheduledOnly ? null : session.earned_amount;
                             if (
-                                isScheduledBadge &&
+                                scheduledOnly &&
                                 user &&
                                 session.scheduled_start_at &&
                                 session.scheduled_end_at
@@ -357,7 +347,7 @@ export default function CalendarPage() {
                                     <div className="flex items-center gap-6">
                                         <span
                                             className={`inline-flex w-[30px] items-center justify-center rounded border px-0.5 py-0.5 text-xs ${
-                                                isScheduledBadge
+                                                scheduledOnly
                                                     ? "border-[#898989] bg-[#EFEFEF] text-[#898989]"
                                                     : "border-[#FF7F50] bg-[#FFDACC] text-[#FF7F50]"
                                             }`}
