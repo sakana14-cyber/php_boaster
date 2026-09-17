@@ -198,6 +198,8 @@ export default function DashboardPage() {
               : `次の出勤 ${formatShiftRange(data.todays_shift)}`
           : null;
 
+    const showProgressRing = Boolean(activeSession) && isWithinShift(activeSession, now);
+
     return (
         <div className="min-h-screen bg-white py-12 flex flex-col items-center gap-6">
             <p className="text-sm text-[#898989] text-center px-4 min-h-5">{statusText}</p>
@@ -208,7 +210,7 @@ export default function DashboardPage() {
 
             <div className="flex-1 flex flex-col items-center justify-center gap-6">
             <div className="relative w-[380px] h-[380px] flex items-center justify-center">
-                {activeSession && (
+                {showProgressRing ? (
                     <svg viewBox="0 0 380 380" className="absolute inset-0 -rotate-90">
                         <defs>
                             <linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -243,6 +245,10 @@ export default function DashboardPage() {
                             strokeDashoffset={dashOffset}
                             filter={hasLapped ? "url(#ring-overlap-shadow)" : undefined}
                         />
+                    </svg>
+                ) : (
+                    <svg viewBox="0 0 380 380" className="absolute inset-0">
+                        <circle cx="190" cy="190" r={RING_RADIUS} fill="none" stroke="#D9D9D9" strokeWidth="20" />
                     </svg>
                 )}
 
