@@ -18,7 +18,6 @@ class HomeController extends Controller
             ->first();
 
         $todaysShift = $user->workSessions()
-            ->whereNull('actual_start_at')
             ->whereDate('scheduled_start_at', today())
             ->orderBy('scheduled_start_at')
             ->first();

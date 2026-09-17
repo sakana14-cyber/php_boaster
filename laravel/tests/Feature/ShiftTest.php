@@ -61,6 +61,28 @@ class ShiftTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_dashboard_still_returns_todays_shift_after_early_clock_out(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-20 12:00:00'));
+
+        $user = User::factory()->create();
+        $shift = $user->workSessions()->create([
+            'scheduled_start_at' => Carbon::parse('2026-09-20 09:00:00'),
+            'scheduled_end_at' => Carbon::parse('2026-09-20 17:00:00'),
+            'actual_start_at' => Carbon::parse('2026-09-20 09:00:00'),
+            'actual_end_at' => Carbon::parse('2026-09-20 11:00:00'),
+            'earned_amount' => 2000,
+        ]);
+
+        $this->actingAs($user)
+            ->getJson('/api/dashboard')
+            ->assertOk()
+            ->assertJsonPath('todays_shift.id', $shift->id)
+            ->assertJsonPath('active_session', null);
+
+        Carbon::setTestNow();
+    }
+
     public function test_recent_shifts_returns_unique_time_pairs_in_recency_order(): void
     {
         $user = User::factory()->create();
