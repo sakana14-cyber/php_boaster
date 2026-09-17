@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class WorkSessionTest extends TestCase
@@ -90,5 +91,81 @@ class WorkSessionTest extends TestCase
     public function test_guest_cannot_clock_in(): void
     {
         $this->postJson('/api/work-sessions')->assertUnauthorized();
+    }
+
+    public function test_second_clock_in_within_shift_window_links_to_the_shift(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-20 10:10:00'));
+
+        $user = User::factory()->create();
+        $shift = $user->workSessions()->create([
+            'scheduled_start_at' => Carbon::parse('2026-09-20 09:00:00'),
+            'scheduled_end_at' => Carbon::parse('2026-09-20 12:00:00'),
+            'actual_start_at' => Carbon::parse('2026-09-20 09:00:00'),
+            'actual_end_at' => Carbon::parse('2026-09-20 09:05:00'),
+            'earned_amount' => 100,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/api/work-sessions')
+            ->assertCreated()
+            ->assertJsonPath('work_session.scheduled_start_at', $shift->scheduled_start_at->toIso8601String())
+            ->assertJsonPath('work_session.scheduled_end_at', $shift->scheduled_end_at->toIso8601String());
+
+        $newSession = $user->workSessions()->whereNull('actual_end_at')->firstOrFail();
+        $this->assertSame($shift->id, $newSession->shift_id);
+        $this->assertNull($newSession->scheduled_start_at);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_second_clock_in_outside_shift_window_does_not_link_to_a_shift(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-20 15:00:00'));
+
+        $user = User::factory()->create();
+        $user->workSessions()->create([
+            'scheduled_start_at' => Carbon::parse('2026-09-20 09:00:00'),
+            'scheduled_end_at' => Carbon::parse('2026-09-20 12:00:00'),
+            'actual_start_at' => Carbon::parse('2026-09-20 09:00:00'),
+            'actual_end_at' => Carbon::parse('2026-09-20 09:05:00'),
+            'earned_amount' => 100,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/api/work-sessions')
+            ->assertCreated()
+            ->assertJsonPath('work_session.scheduled_start_at', null)
+            ->assertJsonPath('work_session.scheduled_end_at', null);
+
+        $newSession = $user->workSessions()->whereNull('actual_end_at')->firstOrFail();
+        $this->assertNull($newSession->shift_id);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_editing_the_shift_updates_the_linked_attendances_response(): void
+    {
+        $user = User::factory()->create();
+        $shift = $user->workSessions()->create([
+            'scheduled_start_at' => Carbon::parse('2026-09-20 09:00:00'),
+            'scheduled_end_at' => Carbon::parse('2026-09-20 12:00:00'),
+        ]);
+        $attendance = $user->workSessions()->create([
+            'shift_id' => $shift->id,
+            'actual_start_at' => Carbon::parse('2026-09-20 10:00:00'),
+            'actual_end_at' => Carbon::parse('2026-09-20 10:30:00'),
+            'earned_amount' => 500,
+        ]);
+
+        $shift->update(['scheduled_end_at' => Carbon::parse('2026-09-20 13:00:00')]);
+
+        $this->actingAs($user)
+            ->getJson('/api/calendar/2026-09-20')
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $attendance->id,
+                'scheduled_end_at' => Carbon::parse('2026-09-20 13:00:00')->toIso8601String(),
+            ]);
     }
 }

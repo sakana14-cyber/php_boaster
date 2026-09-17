@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'user_id',
+    'shift_id',
     'scheduled_start_at',
     'scheduled_end_at',
     'actual_start_at',
@@ -41,5 +42,15 @@ class WorkSession extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * この出勤実績が紐づく予定(シフト)。予定自身の行では null。
+     *
+     * @return BelongsTo<WorkSession, $this>
+     */
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(WorkSession::class, 'shift_id');
     }
 }

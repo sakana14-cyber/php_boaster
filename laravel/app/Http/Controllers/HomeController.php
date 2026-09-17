@@ -13,6 +13,7 @@ class HomeController extends Controller
         $user = $request->user();
 
         $activeSession = $user->workSessions()
+            ->with('shift')
             ->whereNotNull('actual_start_at')
             ->whereNull('actual_end_at')
             ->first();
