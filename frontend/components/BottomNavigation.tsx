@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { House, CalendarDays, Settings } from "lucide-react";
 
 const TABS = [
-    { href: "/dashboard", icon: House },
+    { href: "/home", icon: House },
     { href: "/calendar", icon: CalendarDays },
     { href: "/settings", icon: Settings },
 ];
